@@ -2,23 +2,25 @@ import { notFound } from "next/navigation";
 
 import type { Metadata } from "next";
 
+import { ptBr } from "@/i18n/dictionaries/pt-br";
+
 import { DownloadPage } from "../_components/download-page";
-import { LANDINGS, pageMetadata } from "../_content/landings";
+import { LANDING_IDS, pageMetadata } from "../_content/landings";
 
 type LandingProps = { params: Promise<{ slug: string }> };
 
 export const dynamicParams = false;
 
-export const generateStaticParams = () => LANDINGS.map(({ slug }) => ({ slug }));
+export const generateStaticParams = () => LANDING_IDS.map((id) => ({ slug: ptBr.landings[id].slug }));
 
 const findLanding = async (params: LandingProps["params"]) => {
   const { slug } = await params;
-  return LANDINGS.find((landing) => landing.slug === slug) ?? notFound();
+  return LANDING_IDS.find((id) => ptBr.landings[id].slug === slug) ?? notFound();
 };
 
 export const generateMetadata = async ({ params }: LandingProps): Promise<Metadata> =>
-  pageMetadata(await findLanding(params));
+  pageMetadata(ptBr, await findLanding(params));
 
 export default async function LandingPage({ params }: LandingProps) {
-  return <DownloadPage content={await findLanding(params)} />;
+  return <DownloadPage dictionary={ptBr} page={await findLanding(params)} />;
 }

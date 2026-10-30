@@ -1,9 +1,12 @@
 import type { MetadataRoute } from "next";
 
 import { APP_CONFIG } from "@/config/app-config";
+import { ptBr } from "@/i18n/dictionaries/pt-br";
 
-import { HOME, LANDINGS } from "./_content/landings";
+import { LANDING_IDS, pagePath } from "./_content/landings";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [HOME, ...LANDINGS].map(({ path }) => ({ url: new URL(path, APP_CONFIG.url).href }));
+  return (["home", ...LANDING_IDS] as const).map((page) => ({
+    url: new URL(pagePath(ptBr, page), APP_CONFIG.url).href,
+  }));
 }

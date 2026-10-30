@@ -6,6 +6,8 @@ import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 
 import { APP_CONFIG } from "@/config/app-config";
+import { DictionaryProvider } from "@/i18n/client";
+import { ptBr } from "@/i18n/dictionaries/pt-br";
 
 import "./globals.css";
 
@@ -18,9 +20,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
   applicationName: APP_CONFIG.name,
   authors: [{ name: APP_CONFIG.name }],
-  title: APP_CONFIG.meta.title,
-  description: APP_CONFIG.meta.description,
-  keywords: APP_CONFIG.meta.keywords,
+  title: ptBr.home.title,
+  description: ptBr.home.description,
+  keywords: ptBr.home.keywords,
   openGraph: {
     type: "website",
     siteName: APP_CONFIG.name,
@@ -36,7 +38,7 @@ export default function RootLayout({ children }: Readonly<{ children: ReactNode 
     <html lang="pt-BR" className={jakarta.variable} suppressHydrationWarning>
       <body className="min-h-screen antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
-          {children}
+          <DictionaryProvider value={ptBr.client}>{children}</DictionaryProvider>
         </ThemeProvider>
       </body>
     </html>

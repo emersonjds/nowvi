@@ -18,14 +18,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  ERROR_MESSAGES,
-  type ErrorCode,
-  errorCodeSchema,
-  type FreeFormat,
-  fetchVideoInfo,
-  type VideoInfo,
-} from "@/lib/api";
+import { useDictionary } from "@/i18n/client";
+import { type ErrorCode, errorCodeSchema, type FreeFormat, fetchVideoInfo, type VideoInfo } from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
 import { PixSheet } from "./pix-sheet";
@@ -85,6 +79,8 @@ const PLATFORM_CHIPS = [
 const withScheme = (value: string) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`);
 
 export const Downloader = ({ hero }: { hero: ReactNode }) => {
+  const dictionary = useDictionary();
+  const copy = dictionary.downloader;
   const [state, dispatch] = useReducer(reducer, { status: "idle" });
   const [url, setUrl] = useState("");
   const [pixOpen, setPixOpen] = useState(false);
@@ -170,18 +166,19 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
   };
 
   const video = state.status === "ready" || state.status === "waiting" ? state.video : null;
-  const openPix = video?.full_hd_available ? () => setPixOpen(true) : undefined;
+  const fullHd = dictionary.features.fullHdPix && video?.full_hd_available === true;
+  const openPix = fullHd ? () => setPixOpen(true) : undefined;
 
   return (
-    <section ref={sectionRef} aria-label="Baixar vídeo" className="flex scroll-mt-20 flex-col gap-6">
+    <section ref={sectionRef} aria-label={copy.label} className="flex scroll-mt-20 flex-col gap-6">
       {video ? (
         <>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <Button variant="ghost" className="-ml-3 h-11 px-3 text-base" onClick={reset}>
               <ArrowLeftIcon className="size-5" aria-hidden />
-              Nova busca
+              {copy.newSearch}
             </Button>
-            <Badge className="bg-accent text-accent-foreground h-7 px-3">Vídeo pronto para download</Badge>
+            <Badge className="bg-accent text-accent-foreground h-7 px-3">{copy.ready}</Badge>
           </div>
 
           {state.status === "waiting" ? (
@@ -201,7 +198,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
             <>
               <VideoCard video={video} />
               <QualityOptions
-                formats={video.formats}
+                formats={fullHd ? video.formats : video.formats.filter((format) => format.tier === "free")}
                 selected={state.format}
                 onSelect={(format) => dispatch({ type: "choose", format })}
                 onFree={startFree}
@@ -211,7 +208,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
             </>
           ) : null}
 
-          {video.full_hd_available ? (
+          {fullHd ? (
             <PixSheet
               key={video.free.token}
               open={pixOpen}
@@ -231,7 +228,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
             aria-busy={state.status === "loading"}
           >
             <label htmlFor="video-url" className="sr-only">
-              Link do vídeo
+              {copy.inputLabel}
             </label>
             <InputGroup className="bg-muted h-14 rounded-2xl">
               <InputGroupAddon>
@@ -246,7 +243,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
                 autoCapitalize="none"
                 spellCheck={false}
                 required
-                placeholder="Cole o link do vídeo aqui"
+                placeholder={copy.placeholder}
                 value={url}
                 onChange={(event) => setUrl(event.target.value)}
                 disabled={state.status === "loading"}
@@ -262,7 +259,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
                   disabled={state.status === "loading"}
                 >
                   <ClipboardPasteIcon className="size-4" aria-hidden />
-                  Colar
+                  {copy.paste}
                 </InputGroupButton>
               </InputGroupAddon>
             </InputGroup>
@@ -272,19 +269,19 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
               disabled={state.status === "loading"}
             >
               <DownloadIcon className="size-5" aria-hidden />
-              {state.status === "loading" ? "Buscando vídeo…" : "Baixar Agora"}
+              {state.status === "loading" ? copy.loading : copy.submit}
             </Button>
           </form>
 
           {state.status === "error" ? (
             <Alert variant="destructive" id="video-url-erro" className="rounded-2xl p-4">
               <CircleAlertIcon aria-hidden />
-              <AlertDescription className="text-base">{ERROR_MESSAGES[state.code]}</AlertDescription>
+              <AlertDescription className="text-base">{dictionary.errors[state.code]}</AlertDescription>
             </Alert>
           ) : null}
 
           {state.status === "loading" ? (
-            <div className="bg-card flex gap-4 rounded-2xl border p-4" role="status" aria-label="Buscando vídeo">
+            <div className="bg-card flex gap-4 rounded-2xl border p-4" role="status" aria-label={copy.loading}>
               <Skeleton className="aspect-[3/4] w-24 shrink-0 rounded-xl sm:w-32" />
               <div className="flex flex-1 flex-col gap-3">
                 <Skeleton className="h-5 w-20" />
@@ -295,7 +292,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
             </div>
           ) : (
             <div className="flex flex-col items-center gap-2">
-              <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">Funciona com</p>
+              <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">{copy.worksWith}</p>
               <ul className="flex flex-wrap justify-center gap-2">
                 {PLATFORM_CHIPS.map(({ label, Icon }) => (
                   <li

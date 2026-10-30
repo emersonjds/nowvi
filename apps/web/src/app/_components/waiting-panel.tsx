@@ -16,20 +16,13 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { fill, useDictionary } from "@/i18n/client";
 import { downloadUrl, type FreeFormat } from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
 import { formatMegabytes, qualityLabel } from "./quality-options";
 
-const TITLE = {
-  waiting: "Liberando seu download…",
-  ready: "Seu download está liberado",
-  downloading: "Seu vídeo está sendo baixado",
-} as const;
-
-const ANNOUNCEMENT = { waiting: "", ready: "Download liberado", downloading: "Download iniciado" } as const;
-
-const phaseOf = (downloading: boolean, done: boolean): keyof typeof TITLE => {
+const phaseOf = (downloading: boolean, done: boolean) => {
   if (downloading) return "downloading";
   if (done) return "ready";
   return "waiting";
@@ -56,6 +49,7 @@ export const WaitingPanel = ({
   onNewVideo,
   onOtherQuality,
 }: WaitingPanelProps) => {
+  const copy = useDictionary().waiting;
   const [now, setNow] = useState(startedAt);
   const [downloading, setDownloading] = useState(false);
   const remainingMs = Math.max(0, readyAt - now);
@@ -84,23 +78,22 @@ export const WaitingPanel = ({
       <div className="flex flex-col items-center gap-2 text-center">
         <Badge className="bg-accent text-accent-foreground h-7 px-3 font-bold tracking-wider uppercase">
           <ZapIcon aria-hidden />
-          Acesso gratuito
+          {copy.badge}
         </Badge>
         <h2 id="espera-titulo" tabIndex={-1} className="text-[26px] leading-8 font-bold tracking-tight outline-none">
-          {TITLE[phase]}
+          {copy.titles[phase]}
         </h2>
         <p className="text-muted-foreground">
-          {phase === "downloading" && "Confira a pasta de downloads do celular ou do computador."}
-          {phase === "ready" && "Toque em Baixar agora para salvar o vídeo."}
+          {phase === "downloading" && copy.downloadingHint}
+          {phase === "ready" && copy.readyHint}
           {phase === "waiting" && (
             <>
-              Seu download libera em <strong className="text-primary">{seconds}s</strong>. Por favor, mantenha esta tela
-              aberta.
+              {copy.unlocksIn} <strong className="text-primary">{seconds}s</strong>. {copy.keepOpen}
             </>
           )}
         </p>
         <p className="sr-only" aria-live="polite">
-          {ANNOUNCEMENT[phase]}
+          {copy.announcements[phase]}
         </p>
       </div>
 
@@ -110,22 +103,22 @@ export const WaitingPanel = ({
         {phase === "downloading" && (
           <>
             <p className="bg-muted flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium">
-              <CircleCheckIcon className="text-primary size-5" aria-hidden />O download começou. Se não abrir, toque em
-              Baixar de novo.
+              <CircleCheckIcon className="text-primary size-5" aria-hidden />
+              {copy.started}
             </p>
             <Button className="h-12 text-base font-bold" onClick={onNewVideo}>
               <RotateCcwIcon className="size-5" aria-hidden />
-              Baixar novo vídeo
+              {copy.newVideo}
             </Button>
             <Button asChild variant="secondary" className="h-12 text-base font-bold">
               <a href={downloadUrl(format.token)} download onClick={handleDownload}>
                 <DownloadIcon className="size-5" aria-hidden />
-                Baixar de novo
+                {copy.again}
               </a>
             </Button>
             <Button variant="ghost" className="h-12 text-base font-bold" onClick={onOtherQuality}>
               <Layers2Icon className="size-5" aria-hidden />
-              Baixar em outra qualidade
+              {copy.otherQuality}
             </Button>
           </>
         )}
@@ -133,18 +126,18 @@ export const WaitingPanel = ({
           <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-base font-bold">
             <a href={downloadUrl(format.token)} download onClick={handleDownload}>
               <DownloadIcon className="size-5" aria-hidden />
-              Baixar agora
+              {copy.download}
             </a>
           </Button>
         )}
         {phase === "waiting" && (
           <Button disabled variant="secondary" className="h-12 text-base font-bold">
             <LockIcon className="size-5" aria-hidden />
-            Aguardando anúncio ({seconds}s)…
+            {fill(copy.waitingAd, { seconds })}
           </Button>
         )}
         {downloading ? null : (
-          <Progress value={progress} aria-label="Progresso da liberação" className="[&>*]:bg-accent h-1.5" />
+          <Progress value={progress} aria-label={copy.progress} className="[&>*]:bg-accent h-1.5" />
         )}
       </div>
 
@@ -154,15 +147,15 @@ export const WaitingPanel = ({
             <span className="bg-accent text-accent-foreground flex size-10 items-center justify-center rounded-xl">
               <ZapIcon className="size-5" aria-hidden />
             </span>
-            <h3 className="text-lg font-bold">Quer pular a espera?</h3>
+            <h3 className="text-lg font-bold">{copy.skipTitle}</h3>
           </div>
-          <p className="text-muted-foreground text-sm">Baixe na hora, sem anúncio e em Full HD 1080p.</p>
+          <p className="text-muted-foreground text-sm">{copy.skipText}</p>
           <Button
             variant="secondary"
             className="text-primary h-auto min-h-12 justify-between px-4 py-2 text-left font-bold whitespace-normal"
             onClick={onFullHd}
           >
-            Baixar em Full HD por R$ 2,00 no Pix
+            {copy.skipButton}
             <ArrowRightIcon className="size-5" aria-hidden />
           </Button>
         </article>
@@ -171,7 +164,7 @@ export const WaitingPanel = ({
       <p className="bg-muted flex items-center gap-3 rounded-xl px-4 py-3 text-sm">
         <FilmIcon className="text-primary size-5" aria-hidden />
         <span className="flex-1">
-          Vídeo {qualityLabel(format)} em {format.ext.toUpperCase()}
+          {fill(copy.file, { quality: qualityLabel(format), ext: format.ext.toUpperCase() })}
         </span>
         {format.filesize_bytes ? (
           <span className="text-muted-foreground">{formatMegabytes(format.filesize_bytes)}</span>

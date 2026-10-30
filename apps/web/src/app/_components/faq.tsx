@@ -1,13 +1,14 @@
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import type { Dictionary } from "@/i18n/dictionaries/pt-br";
 
 import type { Question } from "../_content/landings";
 
-export const Faq = ({ questions }: { questions: Question[] }) => (
+export const Faq = ({ questions, copy }: { questions: Question[]; copy: Dictionary["faq"] }) => (
   <section aria-labelledby="faq-titulo" className="flex flex-col gap-6">
     <div className="flex flex-col items-center gap-1 text-center">
-      <p className="text-primary text-xs font-semibold tracking-widest uppercase">Tire suas dúvidas</p>
+      <p className="text-primary text-xs font-semibold tracking-widest uppercase">{copy.eyebrow}</p>
       <h2 id="faq-titulo" className="text-2xl font-bold tracking-tight md:text-3xl">
-        Perguntas Frequentes
+        {copy.title}
       </h2>
     </div>
     <Accordion type="single" collapsible className="gap-3">
