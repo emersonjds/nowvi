@@ -44,3 +44,20 @@ ficou limitado a celular com H.264 de até 50 MB, e quem baixa não paga de novo
 - `downloading`: o botão continua, abaixo de "Baixar em outra qualidade".
 - Copy nos 4 idiomas, no dicionário.
 - 375px, alvo de 44px. O CTA accent continua sendo só o "Baixar agora".
+
+## D-2: Detalhes de SEO do pacote rápido (NOWVI-36), 2026-10-30
+
+Proposta do agent `seo`, revisada pela sessão principal. Não houve voto do `ux`, porque nada aqui
+muda tela ou fluxo.
+- **Fonte:** o preload fica só no subset `latin`. O next/font já emite o `@font-face` de
+  `latin-ext`, `vietnamese` e `cyrillic-ext` com `unicode-range` e `display: swap`. O preload extra
+  custaria cerca de 30 KB por página sem ganho em pt, en, es e id. Revisite quando entrar `vi`.
+- **`llms.txt`:** gerado por rota a partir dos dicionários e do `APP_CONFIG.url`, e servido com
+  `X-Robots-Tag: noindex`. Os bots de LLM leem o arquivo direto, e o Google não o lista como
+  página.
+- **Sitemap:** `lastModified` é a constante `CONTENT_UPDATED_AT`, atualizada à mão junto com os
+  dicionários. Nunca muda por build, para não sinalizar mudança falsa.
+- **JSON-LD da entidade** (`Organization` e `WebSite`): fica no template `DownloadPage`, usado por
+  todas as páginas, e não no layout. O HTML sai igual e o JSON-LD continua coberto por teste.
+- **Pendente do domínio (SEO-01 e SEO-02):** o `noindex` no host `*.up.railway.app`, o Rich
+  Results Test e os debuggers de OG.
