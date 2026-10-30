@@ -3,7 +3,6 @@ import type { ReactNode } from "react";
 import { Plus_Jakarta_Sans } from "next/font/google";
 
 import type { Metadata } from "next";
-import { ThemeProvider } from "next-themes";
 
 import { APP_CONFIG } from "@/config/app-config";
 import { DictionaryProvider } from "@/i18n/client";
@@ -42,11 +41,9 @@ export default async function RootLayout({ children, params }: RootLayoutProps) 
   const locale = await resolveLocale(params);
 
   return (
-    <html lang={LOCALE_INFO[locale].htmlLang} className={jakarta.variable} suppressHydrationWarning>
+    <html lang={LOCALE_INFO[locale].htmlLang} className={jakarta.variable}>
       <body className="min-h-screen antialiased">
-        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
-          <DictionaryProvider value={getDictionary(locale).client}>{children}</DictionaryProvider>
-        </ThemeProvider>
+        <DictionaryProvider value={getDictionary(locale).client}>{children}</DictionaryProvider>
       </body>
     </html>
   );

@@ -85,7 +85,7 @@ export const en = {
       ],
     },
     x: {
-      slug: "x-video-downloader",
+      slug: "twitter-video-downloader",
       network: "X (Twitter)",
       title: "X (Twitter) Video Downloader in MP4 | Nowvi",
       description: "Download videos from X (formerly Twitter) posts as MP4, no sign-up needed. Free up to 720p.",
