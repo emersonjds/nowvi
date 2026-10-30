@@ -102,7 +102,9 @@ tempo constante.
 - Rate limit por IP em `/api/*`, com burst de 10 e reposição de 1 a cada 3 s. O IP vem de
   `X-Real-IP` e, na falta dele, do último item do `X-Forwarded-For`, porque o Railway fica na
   frente. IPv6 é agrupado por /64.
-- No máximo 2 jobs em andamento por IP, somando info e download.
+- No máximo 2 jobs em andamento por IP, somando info e download, com IPv6 agrupado por /48.
+- Cada download tem um watchdog que mata o yt-dlp e libera o slot no prazo total (10 min), após
+  30 s sem chunk ou quando o cliente sai.
 - O token pode ser reusado até o `exp`, e cada reuso conta como um download. O nonce de uso único
   fica para depois.
 - Semáforo global de `MAX_CONCURRENT_JOBS` (padrão 6) processos de yt-dlp.
