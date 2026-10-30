@@ -132,7 +132,7 @@ pub async fn info(
                     (1..=5).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric())
                 })
                 .unwrap_or_else(|| "bin".into());
-            let quality = format!("{}p", pick.height);
+            let quality = pick.quality.clone();
             let token = (pick.tier == Tier::Free).then(|| {
                 token::sign(
                     &state.config.token_secret,
