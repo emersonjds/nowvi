@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
 
+import { Plus_Jakarta_Sans } from "next/font/google";
+
 import type { Metadata } from "next";
 import { ThemeProvider } from "next-themes";
 
@@ -8,6 +10,11 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { APP_CONFIG } from "@/config/app-config";
 
 import "./globals.css";
+
+const jakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  variable: "--font-jakarta",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_CONFIG.url),
@@ -28,7 +35,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className="min-h-screen antialiased">
+      <body className={`${jakarta.variable} min-h-screen antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <TooltipProvider>
             {children}
