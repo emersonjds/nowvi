@@ -2,7 +2,15 @@
 
 import { type MouseEvent, useEffect, useState } from "react";
 
-import { ArrowRightIcon, DownloadIcon, FilmIcon, LockIcon, ZapIcon } from "lucide-react";
+import {
+  ArrowRightIcon,
+  CircleCheckIcon,
+  DownloadIcon,
+  FilmIcon,
+  LockIcon,
+  RotateCcwIcon,
+  ZapIcon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -10,6 +18,20 @@ import { Progress } from "@/components/ui/progress";
 import { downloadUrl, type VideoInfo } from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
+
+const TITLE = {
+  waiting: "Liberando seu download…",
+  ready: "Seu download está liberado",
+  downloading: "Seu vídeo está sendo baixado",
+} as const;
+
+const ANNOUNCEMENT = { waiting: "", ready: "Download liberado", downloading: "Download iniciado" } as const;
+
+const phaseOf = (downloading: boolean, done: boolean): keyof typeof TITLE => {
+  if (downloading) return "downloading";
+  if (done) return "ready";
+  return "waiting";
+};
 
 const formatMegabytes = (bytes: number) =>
   `~${(bytes / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`;
@@ -21,12 +43,23 @@ type WaitingPanelProps = {
   expiresAt: number;
   onFullHd?: () => void;
   onExpired: () => void;
+  onNewVideo: () => void;
 };
 
-export const WaitingPanel = ({ video, startedAt, readyAt, expiresAt, onFullHd, onExpired }: WaitingPanelProps) => {
+export const WaitingPanel = ({
+  video,
+  startedAt,
+  readyAt,
+  expiresAt,
+  onFullHd,
+  onExpired,
+  onNewVideo,
+}: WaitingPanelProps) => {
   const [now, setNow] = useState(startedAt);
+  const [downloading, setDownloading] = useState(false);
   const remainingMs = Math.max(0, readyAt - now);
   const done = remainingMs === 0;
+  const phase = phaseOf(downloading, done);
   const seconds = Math.ceil(remainingMs / 1000);
   const progress = 100 - (remainingMs / Math.max(1, readyAt - startedAt)) * 100;
 
@@ -37,7 +70,10 @@ export const WaitingPanel = ({ video, startedAt, readyAt, expiresAt, onFullHd, o
   }, [done]);
 
   const handleDownload = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (Date.now() <= expiresAt) return;
+    if (Date.now() <= expiresAt) {
+      setDownloading(true);
+      return;
+    }
     event.preventDefault();
     onExpired();
   };
@@ -50,12 +86,12 @@ export const WaitingPanel = ({ video, startedAt, readyAt, expiresAt, onFullHd, o
           Acesso gratuito
         </Badge>
         <h2 id="espera-titulo" tabIndex={-1} className="text-[26px] leading-8 font-bold tracking-tight outline-none">
-          {done ? "Seu download está liberado" : "Liberando seu download…"}
+          {TITLE[phase]}
         </h2>
         <p className="text-muted-foreground">
-          {done ? (
-            "Toque em Baixar agora para salvar o vídeo."
-          ) : (
+          {phase === "downloading" && "Confira a pasta de downloads do celular ou do computador."}
+          {phase === "ready" && "Toque em Baixar agora para salvar o vídeo."}
+          {phase === "waiting" && (
             <>
               Seu download libera em <strong className="text-primary">{seconds}s</strong>. Por favor, mantenha esta tela
               aberta.
@@ -63,27 +99,48 @@ export const WaitingPanel = ({ video, startedAt, readyAt, expiresAt, onFullHd, o
           )}
         </p>
         <p className="sr-only" aria-live="polite">
-          {done ? "Download liberado" : ""}
+          {ANNOUNCEMENT[phase]}
         </p>
       </div>
 
       <AdSlot onUpgrade={onFullHd} />
 
       <div className="flex flex-col gap-2">
-        {done ? (
+        {phase === "downloading" && (
+          <>
+            <p className="bg-muted flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium">
+              <CircleCheckIcon className="text-primary size-5" aria-hidden />O download começou. Se não abrir, toque em
+              Baixar de novo.
+            </p>
+            <Button className="h-12 text-base font-bold" onClick={onNewVideo}>
+              <RotateCcwIcon className="size-5" aria-hidden />
+              Baixar novo vídeo
+            </Button>
+            <Button asChild variant="secondary" className="h-12 text-base font-bold">
+              <a href={downloadUrl(video.free.token)} download onClick={handleDownload}>
+                <DownloadIcon className="size-5" aria-hidden />
+                Baixar de novo
+              </a>
+            </Button>
+          </>
+        )}
+        {phase === "ready" && (
           <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-base font-bold">
             <a href={downloadUrl(video.free.token)} download onClick={handleDownload}>
               <DownloadIcon className="size-5" aria-hidden />
               Baixar agora
             </a>
           </Button>
-        ) : (
+        )}
+        {phase === "waiting" && (
           <Button disabled variant="secondary" className="h-12 text-base font-bold">
             <LockIcon className="size-5" aria-hidden />
             Aguardando anúncio ({seconds}s)…
           </Button>
         )}
-        <Progress value={progress} aria-label="Progresso da liberação" className="[&>*]:bg-accent h-1.5" />
+        {downloading ? null : (
+          <Progress value={progress} aria-label="Progresso da liberação" className="[&>*]:bg-accent h-1.5" />
+        )}
       </div>
 
       {onFullHd ? (

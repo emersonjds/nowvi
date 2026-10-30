@@ -169,6 +169,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
               expiresAt={state.expiresAt}
               onFullHd={openPix}
               onExpired={expire}
+              onNewVideo={reset}
             />
           ) : (
             <>
