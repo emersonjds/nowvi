@@ -8,6 +8,7 @@ use axum::response::{IntoResponse, Response};
 pub enum AppError {
     InvalidUrl,
     UnsupportedPlatform,
+    PlatformUnavailable,
     TooLong,
     NotFound,
     RateLimited { retry_after: u64 },
@@ -29,6 +30,9 @@ impl AppError {
             AppError::InvalidUrl => (StatusCode::BAD_REQUEST, "invalid_url"),
             AppError::UnsupportedPlatform => {
                 (StatusCode::UNPROCESSABLE_ENTITY, "unsupported_platform")
+            }
+            AppError::PlatformUnavailable => {
+                (StatusCode::SERVICE_UNAVAILABLE, "platform_unavailable")
             }
             AppError::TooLong => (StatusCode::UNPROCESSABLE_ENTITY, "too_long"),
             AppError::NotFound => (StatusCode::NOT_FOUND, "not_found"),

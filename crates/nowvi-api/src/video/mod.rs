@@ -87,6 +87,10 @@ fn job_slot(state: &AppState, client: ClientIp) -> Result<Slot, AppError> {
     })
 }
 
+// ponytail: hardcoded pause list; yt-dlp needs a login for Instagram since 2026-10 (NOWVI-20).
+// Remove the entry when extraction works again.
+const PAUSED_PLATFORMS: [&str; 1] = ["instagram"];
+
 pub async fn info(
     State(state): State<AppState>,
     Extension(client): Extension<ClientIp>,
@@ -94,6 +98,9 @@ pub async fn info(
 ) -> Result<Json<InfoResponse>, AppError> {
     let Json(request) = body.map_err(|_| AppError::InvalidUrl)?;
     let (url, platform) = allowlist::check(&request.url)?;
+    if PAUSED_PLATFORMS.contains(&platform) {
+        return Err(AppError::PlatformUnavailable);
+    }
     let probe = {
         let _slot = job_slot(&state, client)?;
         ytdlp::probe(&state.config.ytdlp_bin, &url, platform).await?
