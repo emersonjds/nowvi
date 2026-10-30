@@ -24,6 +24,7 @@ use crate::AppState;
 use crate::error::AppError;
 use crate::rate_limit::{ClientIp, JobGuard};
 use crate::token::{self, Claims};
+use ytdlp::Tier;
 
 /// The spec's stream limits: 30 s without a chunk ends it, and so do 10 min in total.
 const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
@@ -45,6 +46,18 @@ pub struct InfoResponse {
     duration_seconds: u64,
     free: Free,
     full_hd_available: bool,
+    formats: Vec<FormatItem>,
+}
+
+/// One row of the quality list; only `free` rows carry a token.
+#[derive(Serialize)]
+pub struct FormatItem {
+    quality: String,
+    height: u32,
+    ext: String,
+    filesize_bytes: Option<u64>,
+    tier: Tier,
+    token: Option<String>,
 }
 
 #[derive(Serialize)]
@@ -100,30 +113,54 @@ pub async fn info(
     {
         return Err(AppError::TooLong);
     }
-    let format_id = probe.format_id.ok_or_else(|| {
-        tracing::warn!(platform, "yt-dlp resolved no format");
-        AppError::NotFound
-    })?;
-    // It names the file and picks the Content-Type; anything odd stays out of the headers.
-    let ext = probe
-        .ext
-        .filter(|ext| {
-            (1..=5).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric())
-        })
-        .unwrap_or_else(|| "bin".into());
     let wait_seconds = state.config.ad_wait_seconds;
     let available_at = token::now() + wait_seconds;
-    let token = token::sign(
-        &state.config.token_secret,
-        &Claims {
-            u: url.to_string(),
-            p: platform.into(),
-            f: format_id,
-            e: ext,
-            nbf: available_at,
-            exp: available_at + token::LIFETIME_SECONDS,
-        },
-    );
+    let formats: Vec<FormatItem> = ytdlp::pick_formats(&probe.formats)
+        .into_iter()
+        .map(|pick| {
+            // It names the file and picks the Content-Type; anything odd stays out of the headers.
+            let ext = Some(pick.ext)
+                .filter(|ext| {
+                    (1..=5).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric())
+                })
+                .unwrap_or_else(|| "bin".into());
+            let quality = format!("{}p", pick.height);
+            let token = (pick.tier == Tier::Free).then(|| {
+                token::sign(
+                    &state.config.token_secret,
+                    &Claims {
+                        u: url.to_string(),
+                        p: platform.into(),
+                        f: pick.format_id,
+                        e: ext.clone(),
+                        q: quality.clone(),
+                        nbf: available_at,
+                        exp: available_at + token::LIFETIME_SECONDS,
+                    },
+                )
+            });
+            FormatItem {
+                quality,
+                height: pick.height,
+                ext,
+                filesize_bytes: pick.filesize_bytes,
+                tier: pick.tier,
+                token,
+            }
+        })
+        .collect();
+    let Some(free) = formats.iter().find(|format| format.tier == Tier::Free) else {
+        tracing::warn!(platform, "yt-dlp listed no progressive format up to 720p");
+        return Err(AppError::NotFound);
+    };
+    let free = Free {
+        height: free.height,
+        filesize_bytes: free.filesize_bytes,
+        token: free.token.clone().unwrap_or_default(),
+        available_at,
+        wait_seconds,
+        expires_in_seconds: wait_seconds + token::LIFETIME_SECONDS,
+    };
     Ok(Json(InfoResponse {
         platform,
         title: probe.title.unwrap_or_default(),
@@ -132,20 +169,9 @@ pub async fn info(
             .thumbnail
             .filter(|thumbnail| thumbnail.starts_with("https://")),
         duration_seconds: probe.duration.map_or(0, |seconds| seconds.round() as u64),
-        free: Free {
-            height: ytdlp::short_side(probe.width, probe.height).map_or(0, |side| side as u32),
-            filesize_bytes: probe
-                .filesize
-                .or(probe.filesize_approx)
-                .map(|bytes| bytes as u64),
-            token,
-            available_at,
-            wait_seconds,
-            expires_in_seconds: wait_seconds + token::LIFETIME_SECONDS,
-        },
-        full_hd_available: probe.formats.iter().any(|format| {
-            ytdlp::short_side(format.width, format.height).is_some_and(|side| side >= 1080.0)
-        }),
+        free,
+        full_hd_available: formats.iter().any(|format| format.tier == Tier::FullHd),
+        formats,
     }))
 }
 
@@ -163,6 +189,7 @@ struct Job {
     _slot: Slot,
     pool: PgPool,
     platform: String,
+    quality: String,
     deadline: Instant,
 }
 
@@ -234,6 +261,7 @@ async fn stream(
         _slot: slot,
         pool: state.pool.clone(),
         platform: claims.p,
+        quality: claims.q,
         deadline,
     };
     // A `None` state ends the body; dropping the job kills the child and frees the slot.
@@ -286,7 +314,11 @@ async fn finish(mut job: Job) {
     };
     match exit {
         Ok(status) if status.success() => {
-            tokio::spawn(crate::db::record_download(job.pool, job.platform));
+            tokio::spawn(crate::db::record_download(
+                job.pool,
+                job.platform,
+                job.quality,
+            ));
         }
         Ok(status) => tracing::warn!(%status, "yt-dlp download exited with an error"),
         Err(error) => tracing::error!(%error, "yt-dlp download wait failed"),
