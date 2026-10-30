@@ -255,6 +255,14 @@ export const en = {
       skipText: "Download instantly, ad-free and in Full HD 1080p.",
       skipButton: "Download in Full HD",
       file: "{quality} video in {ext}",
+      share: {
+        preparing: "Getting it ready to send…",
+        send: "Send on WhatsApp",
+        prepare: "Get {quality} ready for WhatsApp",
+        failed: "Couldn't attach it. Download it and send it",
+        shareLink: "Share link",
+        linkText: "Download TikTok, X and Facebook videos for free with Nowvi: {url}",
+      },
     },
     pix: {
       title: "Full HD 1080p",

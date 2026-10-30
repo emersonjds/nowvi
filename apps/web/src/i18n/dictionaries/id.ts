@@ -264,6 +264,14 @@ export const id = {
       skipText: "Download langsung, tanpa iklan, dan dalam Full HD 1080p.",
       skipButton: "Download dalam Full HD",
       file: "Video {quality} dalam {ext}",
+      share: {
+        preparing: "Menyiapkan kiriman…",
+        send: "Kirim ke WhatsApp",
+        prepare: "Siapkan {quality} untuk WhatsApp",
+        failed: "Gagal. Unduh lalu kirim sendiri",
+        shareLink: "Bagikan tautan",
+        linkText: "Unduh video TikTok, X, dan Facebook gratis di Nowvi: {url}",
+      },
     },
     pix: {
       title: "Full HD 1080p",

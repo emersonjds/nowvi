@@ -258,6 +258,14 @@ export const es = {
       skipText: "Descarga al instante, sin anuncios y en Full HD 1080p.",
       skipButton: "Descargar en Full HD",
       file: "Video {quality} en {ext}",
+      share: {
+        preparing: "Preparando el envío…",
+        send: "Enviar por WhatsApp",
+        prepare: "Preparar {quality} para WhatsApp",
+        failed: "No se pudo. Descárgalo y envíalo",
+        shareLink: "Compartir enlace",
+        linkText: "Descarga videos de TikTok, X y Facebook gratis con Nowvi: {url}",
+      },
     },
     pix: {
       title: "Full HD 1080p",

@@ -184,6 +184,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
           {state.status === "waiting" ? (
             <WaitingPanel
               format={state.format}
+              formats={state.video.formats}
               startedAt={state.startedAt}
               readyAt={state.readyAt}
               expiresAt={state.expiresAt}
