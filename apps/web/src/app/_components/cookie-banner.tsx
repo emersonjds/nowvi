@@ -41,7 +41,7 @@ export const CookieBanner = () => {
   return (
     <section
       aria-label="Aviso de cookies"
-      className="bg-foreground text-background fixed inset-x-3 bottom-3 z-50 mx-auto flex max-w-xl flex-col gap-3 rounded-2xl p-4 shadow-lg"
+      className="bg-foreground text-background fixed inset-x-3 bottom-3 z-40 mx-auto flex max-w-xl flex-col gap-3 rounded-2xl p-4 shadow-lg"
     >
       <p className="flex items-start gap-3 text-sm">
         <CookieIcon className="text-accent mt-0.5 size-5 shrink-0" aria-hidden />

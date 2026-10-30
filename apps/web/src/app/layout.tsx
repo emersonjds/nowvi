@@ -34,8 +34,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
-    <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`${jakarta.variable} min-h-screen antialiased`}>
+    <html lang="pt-BR" className={jakarta.variable} suppressHydrationWarning>
+      <body className="min-h-screen antialiased">
         <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
           <TooltipProvider>
             {children}
