@@ -3,8 +3,8 @@ import { type NextRequest, NextResponse } from "next/server";
 import { isLocale, LOCALE_COOKIE, type Locale } from "@/i18n/config";
 import { getDictionary, LANDING_IDS, pagePath } from "@/i18n/dictionary";
 
-// Googlebot, Bingbot, GPTBot, ClaudeBot and PerplexityBot all contain "bot".
-const BOT_PATTERN = /bot|crawler|spider/i;
+// Googlebot, Bingbot, GPTBot, ClaudeBot and PerplexityBot all send "<name>bot/<version>"; phones like CUBOT do not.
+const BOT_PATTERN = /\b(bot|crawler|spider)\b|bot\//i;
 
 const LANGUAGE_TO_LOCALE: Partial<Record<string, Locale>> = { pt: "pt-br", es: "es", id: "id", in: "id", en: "en" };
 
@@ -36,7 +36,9 @@ export const proxy = (request: NextRequest) => {
 
   if (BOT_PATTERN.test(request.headers.get("user-agent") ?? "")) {
     url.pathname = landing ? pagePath("pt-br", landing) : pagePath("en", "home");
-    return NextResponse.redirect(url, 308);
+    const response = NextResponse.redirect(url, 308);
+    response.headers.set("Vary", "Accept-Language, Cookie, User-Agent");
+    return response;
   }
 
   const cookie = request.cookies.get(LOCALE_COOKIE)?.value;
