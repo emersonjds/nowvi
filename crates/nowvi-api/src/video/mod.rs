@@ -13,6 +13,7 @@ use sqlx::PgPool;
 use tokio::process::Child;
 use tokio::sync::OwnedSemaphorePermit;
 use tokio_util::io::ReaderStream;
+use url::Url;
 
 use crate::AppState;
 use crate::error::AppError;
@@ -69,10 +70,19 @@ pub async fn info(
     let (url, platform) = allowlist::check(&request.url)?;
     let probe = {
         let _slot = job_slot(&state, client)?;
-        ytdlp::probe(&state.config.ytdlp_bin, url.as_str()).await?
+        ytdlp::probe(&state.config.ytdlp_bin, &url, platform).await?
     };
+    if probe
+        .webpage_url
+        .as_deref()
+        .map(allowlist::check)
+        .is_none_or(|checked| checked.is_err())
+    {
+        tracing::warn!(platform, "yt-dlp resolved a page outside the allowlist");
+        return Err(AppError::ExtractFailed);
+    }
     let format_id = probe.format_id.ok_or_else(|| {
-        tracing::warn!(%url, "yt-dlp resolved no format");
+        tracing::warn!(platform, "yt-dlp resolved no format");
         AppError::NotFound
     })?;
     let available_at = token::now() + state.config.ad_wait_seconds;
@@ -130,8 +140,9 @@ pub async fn download(
 ) -> Result<Response, AppError> {
     let Query(query) = query.map_err(|_| AppError::InvalidToken)?;
     let claims = token::verify(&state.config.token_secret, &query.token, token::now())?;
+    let url = Url::parse(&claims.u).map_err(|_| AppError::InvalidToken)?;
     let slot = job_slot(&state, client)?;
-    let mut child = ytdlp::stream(&state.config.ytdlp_bin, &claims.u, &claims.f)?;
+    let mut child = ytdlp::stream(&state.config.ytdlp_bin, &url, &claims.p, &claims.f)?;
     let Some(stdout) = child.stdout.take() else {
         return Err(AppError::ExtractFailed);
     };
@@ -144,11 +155,14 @@ pub async fn download(
             return Err(AppError::ExtractFailed);
         }
         Ok(None) => {
-            tracing::warn!(url = %claims.u, "yt-dlp ended without bytes");
+            tracing::warn!(platform = claims.p, "yt-dlp ended without bytes");
             return Err(AppError::ExtractFailed);
         }
         Err(_) => {
-            tracing::warn!(url = %claims.u, "yt-dlp download timed out before the first byte");
+            tracing::warn!(
+                platform = claims.p,
+                "yt-dlp download timed out before the first byte"
+            );
             return Err(AppError::ExtractFailed);
         }
     };
