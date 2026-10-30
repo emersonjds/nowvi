@@ -37,7 +37,35 @@
     ".claude/skills/lagune.repair/SKILL.md",
     ".claude/skills/lagune.specialize/SKILL.md",
     ".claude/skills/lagune.prove/SKILL.md",
-    ".lagune/specializations.md"
+    ".lagune/specializations.md",
+    ".lagune/skills/access-control.md",
+    ".lagune/skills/api-endpoint.md",
+    ".lagune/skills/browser.md",
+    ".lagune/skills/container.md",
+    ".lagune/skills/credential-endpoint.md",
+    ".lagune/skills/crypto.md",
+    ".lagune/skills/csv.md",
+    ".lagune/skills/federation.md",
+    ".lagune/skills/http-request.md",
+    ".lagune/skills/infra.md",
+    ".lagune/skills/interpreter.md",
+    ".lagune/skills/javascript.md",
+    ".lagune/skills/network.md",
+    ".lagune/skills/path.md",
+    ".lagune/skills/payment.md",
+    ".lagune/skills/regex.md",
+    ".lagune/skills/rust.md",
+    ".lagune/skills/secrets.md",
+    ".lagune/skills/serverless.md",
+    ".lagune/skills/sql.md",
+    ".lagune/skills/transport.md",
+    ".lagune/skills/upload.md",
+    ".lagune/skills/xml.md"
   ],
-  "categories": []
+  "categories": [
+    "owasp",
+    "infra",
+    "javascript",
+    "rust"
+  ]
 }
