@@ -22,10 +22,10 @@ const readConsent = (): string | null => {
   }
 };
 
-const saveConsent = (value: Consent) => {
-  memoryConsent = value;
+const saveConsent = (consent: Consent) => {
+  memoryConsent = consent;
   try {
-    window.localStorage.setItem(STORAGE_KEY, value);
+    window.localStorage.setItem(STORAGE_KEY, consent);
   } catch {
     // Storage blocked (private mode): the choice lasts for this visit only.
   }
