@@ -18,7 +18,7 @@ const copy = en.notFound;
 
 export const metadata: Metadata = { metadataBase: new URL(APP_CONFIG.url), title: copy.title };
 
-// Unmatched URLs carry no locale, so this page speaks English, like x-default.
+// Unmatched URLs carry no locale: this page speaks English, like x-default.
 export default function GlobalNotFound() {
   return (
     <html lang="en" className={jakarta.variable}>
