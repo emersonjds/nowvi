@@ -16,7 +16,7 @@ Spec da v0: `docs/specs/2026-10-29-nowvi-v0-design.md`. Design: `design/` (expor
 ## Layout
 
 - `apps/web`: Next 16 sobre o next-shadcn-admin-dashboard, com npm. Leia `apps/web/AGENTS.md`. Comandos: `npm run dev`,
-  `npm run check`, `npx tsc --noEmit` e `npm run build`.
+  `npm run check`, `npx tsc --noEmit`, `npm run test:coverage` e `npm run build`.
 - `crates/nowvi-api`: axum + sqlx + Postgres, que chama o `yt-dlp`, com um slice por feature.
   Comandos: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` e `cargo build`.
 - O contrato entre os dois é a seção "Contrato da API" da spec. Nunca importe de um app no outro.
@@ -60,5 +60,5 @@ Toda decisão de produto, UX, arquitetura ou segurança passa por um painel ante
 
 ## Exceção da v0
 
-A v0 sai sem testes, por pedido do Emerson em 2026-10-29. O NOWVI-15 traz TDD e cobertura acima de 90%
-antes da próxima feature.
+A v0 saiu sem testes, por pedido do Emerson em 2026-10-29. A web tem testes desde o NOWVI-34 (Vitest, Testing
+Library e MSW contra o contrato, cobertura travada em 90%). A API segue sem testes até o NOWVI-15.
