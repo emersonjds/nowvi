@@ -155,11 +155,17 @@ Como as `NEXT_PUBLIC_*` são inlined no build, o Dockerfile as declara como `ARG
 
 ## Deploy (NOWVI-11)
 
-Projeto Railway `nowvi` com os serviços `web`, `api` e `Postgres`, cada app com seu Dockerfile.
-- O `api` roda em `debian:bookworm-slim` com `ffmpeg`, `python3` e o `yt-dlp` baixado da última
-  release.
-- O `web` sai do build `output: "standalone"`.
-- Healthcheck do `api` em `/health`.
+Projeto Railway `nowvi`, com os serviços `web`, `api` e `Postgres`. Cada app tem seu Dockerfile e
+seu `railway.toml`, e o build parte da raiz do repo (`.dockerignore` na raiz). O Railway faz o
+deploy a partir da `main`.
+
+- **`api`:** imagem `debian:bookworm-slim`, com `tini` e o standalone `yt-dlp_linux` numa versão
+  fixa (`ARG YTDLP_VERSION`), conferido pelo `SHA2-256SUMS`. Não tem python nem ffmpeg; o ffmpeg
+  volta no NOWVI-13. Roda como usuário não-root e tem healthcheck em `/health`.
+- **`web`:** build `output: "standalone"`, com as `NEXT_PUBLIC_*` como `ARG` e
+  `node server.js` como usuário `node`.
+
+O H.264 tem preferência no grátis. Por isso, um TikTok pode sair em 540p H.264 em vez de 720p HEVC.
 
 ## Fora da v0
 
