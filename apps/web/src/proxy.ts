@@ -8,14 +8,16 @@ const BOT_PATTERN = /bot|crawler|spider/i;
 
 const LANGUAGE_TO_LOCALE: Partial<Record<string, Locale>> = { pt: "pt-br", es: "es", id: "id", in: "id", en: "en" };
 
+const parseLanguageRange = (range: string) => {
+  const [tag = "", ...parameters] = range.trim().toLowerCase().split(";");
+  const quality = parameters.map((parameter) => parameter.trim()).find((parameter) => parameter.startsWith("q="));
+  return { language: tag.split("-")[0] ?? "", quality: quality ? Number(quality.slice(2)) : 1 };
+};
+
 const fromAcceptLanguage = (header: string | null): Locale => {
   const preferred = (header ?? "")
     .split(",")
-    .map((entry) => {
-      const [tag = "", ...params] = entry.trim().toLowerCase().split(";");
-      const quality = params.map((param) => param.trim()).find((param) => param.startsWith("q="));
-      return { language: tag.split("-")[0] ?? "", quality: quality ? Number(quality.slice(2)) : 1 };
-    })
+    .map(parseLanguageRange)
     .filter(({ quality }) => quality > 0)
     .sort((left, right) => right.quality - left.quality);
   for (const { language } of preferred) {

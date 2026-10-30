@@ -11,7 +11,7 @@ const answerInfoWith = (body: JsonBodyType) => server.use(http.post(INFO_URL, ()
 const fetchParsedInfo = async () => {
   const result = await fetchVideoInfo("https://x.com/SpaceX/status/1732824684683784516");
   if (!result.ok) throw new Error(`expected a parsed video, got ${result.code}`);
-  return result.data;
+  return result.body;
 };
 
 afterEach(() => {
@@ -173,7 +173,7 @@ describe("createOrder", () => {
   it("returns ok when the API accepts the order", async () => {
     server.use(http.post(ORDERS_URL, () => HttpResponse.json({}, { status: 201 })));
 
-    expect(await createOrder("https://x.com/SpaceX/status/1")).toEqual({ ok: true, data: null });
+    expect(await createOrder("https://x.com/SpaceX/status/1")).toEqual({ ok: true, body: null });
   });
 
   it("turns a network error into unknown", async () => {

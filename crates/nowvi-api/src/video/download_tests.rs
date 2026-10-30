@@ -42,11 +42,11 @@ impl FakeRun {
 fn claims(run: &FakeRun, platform: &str) -> Claims {
     let now = token::now();
     Claims {
-        u: "https://x.com/i/status/1".into(),
-        p: platform.into(),
-        f: format!("{}:{}", run.mode, run.pidfile.display()),
-        e: "mp4".into(),
-        q: "720p".into(),
+        url: "https://x.com/i/status/1".into(),
+        platform: platform.into(),
+        format_id: format!("{}:{}", run.mode, run.pidfile.display()),
+        ext: "mp4".into(),
+        quality: "720p".into(),
         nbf: now - 1,
         exp: now + 600,
     }
@@ -140,7 +140,7 @@ async fn a_complete_download_records_its_quality_and_frees_the_slot() {
     let download_token = token::sign(
         &SECRET,
         &Claims {
-            q: "480p".into(),
+            quality: "480p".into(),
             ..claims(&run, &platform)
         },
     );
@@ -164,7 +164,7 @@ async fn a_token_signed_before_the_quality_claim_records_720p() {
     let download_token = token::sign(
         &SECRET,
         &Claims {
-            q: String::new(),
+            quality: String::new(),
             ..claims(&run, &platform)
         },
     );
@@ -189,7 +189,7 @@ async fn a_download_names_the_file_and_picks_the_content_type_by_ext() {
         let download_token = token::sign(
             &SECRET,
             &Claims {
-                e: ext.into(),
+                ext: ext.into(),
                 ..claims(&run, "x")
             },
         );
@@ -223,7 +223,7 @@ async fn a_failed_download_goes_back_to_the_page_with_its_code() {
     let valid_token = signed(claims(&run, "x"));
     let (_, valid_signature) = valid_token.split_once('.').expect("two parts");
     let other_token = signed(Claims {
-        f: "other-format".into(),
+        format_id: "other-format".into(),
         ..claims(&run, "x")
     });
     let (other_payload, _) = other_token.split_once('.').expect("two parts");
@@ -235,7 +235,7 @@ async fn a_failed_download_goes_back_to_the_page_with_its_code() {
         ),
         (
             signed(Claims {
-                u: "not a url".into(),
+                url: "not a url".into(),
                 ..claims(&run, "x")
             }),
             "invalid_token",

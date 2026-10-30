@@ -54,12 +54,12 @@ export const DownloadPage = ({ locale, page, children }: DownloadPageProps) => {
 
   return (
     <>
-      {jsonLd.map((data) => (
+      {jsonLd.map((schema) => (
         <script
-          key={data["@type"]}
+          key={schema["@type"]}
           type="application/ld+json"
           // biome-ignore lint/security/noDangerouslySetInnerHtml: JSON-LD built from static copy, with "<" escaped
-          dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
+          dangerouslySetInnerHTML={{ __html: serializeJsonLd(schema) }}
         />
       ))}
       <SiteHeader locale={locale} page={page} />

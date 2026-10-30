@@ -23,7 +23,7 @@ const structuredDataScripts = () =>
 const structuredData = (type: string) =>
   structuredDataScripts()
     .map((text) => jsonLdSchema.parse(JSON.parse(text)))
-    .find((data) => data["@type"] === type);
+    .find((schema) => schema["@type"] === type);
 
 const ORGANIZATION_ID = "https://nowvi.test/#organization";
 

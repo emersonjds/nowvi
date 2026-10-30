@@ -48,14 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let pool = db::connect(&config.database_url).await?;
     let limits = Arc::new(rate_limit::RateLimits::default());
-    let prune_limits = limits.clone();
-    tokio::spawn(async move {
-        let mut every_minute = tokio::time::interval(Duration::from_secs(60));
-        loop {
-            every_minute.tick().await;
-            prune_limits.prune();
-        }
-    });
+    tokio::spawn(prune_every_minute(limits.clone()));
     let address = std::net::SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, config.port));
     let state = AppState {
         pool,
@@ -73,6 +66,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_graceful_shutdown(shutdown())
     .await?;
     Ok(())
+}
+
+async fn prune_every_minute(limits: Arc<rate_limit::RateLimits>) {
+    let mut every_minute = tokio::time::interval(Duration::from_secs(60));
+    loop {
+        every_minute.tick().await;
+        limits.prune();
+    }
 }
 
 /// Every route with the protections and headers of the spec's "Proteções".

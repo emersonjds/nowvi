@@ -16,7 +16,7 @@ const HOSTS: [(&str, &str); 6] = [
 /// `instagram.com.evil.com` and `notinstagram.com` do not.
 pub fn check(raw: &str) -> Result<(Url, &'static str), AppError> {
     let url = Url::parse(raw.trim()).map_err(|_| AppError::InvalidUrl)?;
-    // `Url` drops a default `:443`, so only a port that would reach the host is seen here.
+    // `Url` drops a default `:443`: `port()` only sees one that would reach another service.
     if url.scheme() != "https"
         || !url.username().is_empty()
         || url.password().is_some()
@@ -33,7 +33,7 @@ pub fn check(raw: &str) -> Result<(Url, &'static str), AppError> {
             host == *suffix
                 || host
                     .strip_suffix(suffix)
-                    .is_some_and(|rest| rest.ends_with('.'))
+                    .is_some_and(|subdomain| subdomain.ends_with('.'))
         })
         .map(|(_, platform)| *platform)
         .ok_or(AppError::UnsupportedPlatform)?;

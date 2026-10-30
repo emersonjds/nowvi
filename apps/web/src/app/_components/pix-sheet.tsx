@@ -23,15 +23,15 @@ type PixSheetProps = {
 export const PixSheet = ({ open, onOpenChange, url, video, onFree }: PixSheetProps) => {
   const dictionary = useDictionary();
   const copy = dictionary.pix;
-  const [result, setResult] = useState<ErrorCode | "loading">("loading");
-  const requested = useRef(false);
+  const [orderStatus, setOrderStatus] = useState<ErrorCode | "loading">("loading");
+  const orderRequested = useRef(false);
 
-  // The downloader keys this sheet by token, so the order is created once per token.
+  // One order per token: the downloader keys this sheet by the free token.
   useEffect(() => {
-    if (!open || requested.current) return;
-    requested.current = true;
+    if (!open || orderRequested.current) return;
+    orderRequested.current = true;
     // ponytail: no QR flow until NOWVI-2, so any accepted order still reads as "coming soon".
-    void createOrder(url).then((response) => setResult(response.ok ? "payments_disabled" : response.code));
+    void createOrder(url).then((order) => setOrderStatus(order.ok ? "payments_disabled" : order.code));
   }, [open, url]);
 
   return (
@@ -56,10 +56,10 @@ export const PixSheet = ({ open, onOpenChange, url, video, onFree }: PixSheetPro
             <p className="text-primary text-3xl font-extrabold">R$ 2,00</p>
           </div>
           <div aria-live="polite">
-            {result === "loading" ? (
+            {orderStatus === "loading" ? (
               <Skeleton className="h-16 w-full rounded-xl" />
             ) : (
-              <p className="bg-secondary rounded-xl p-4 text-center font-medium">{dictionary.errors[result]}</p>
+              <p className="bg-secondary rounded-xl p-4 text-center font-medium">{dictionary.errors[orderStatus]}</p>
             )}
           </div>
         </div>

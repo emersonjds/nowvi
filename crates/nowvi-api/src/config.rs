@@ -22,44 +22,51 @@ impl Config {
     }
 
     fn from_vars(read: impl Fn(&str) -> Option<String>) -> Result<Self, String> {
-        let var = |name: &str| read(name).filter(|value| !value.is_empty());
-        let database_url = var("DATABASE_URL").ok_or("DATABASE_URL is required")?;
-        let token_secret = var("DOWNLOAD_TOKEN_SECRET")
+        let non_empty = |name: &str| read(name).filter(|value| !value.is_empty());
+        let database_url = non_empty("DATABASE_URL").ok_or("DATABASE_URL is required")?;
+        let token_secret = non_empty("DOWNLOAD_TOKEN_SECRET")
             .ok_or("DOWNLOAD_TOKEN_SECRET is required")?
             .into_bytes();
         if token_secret.len() < 32 {
             return Err("DOWNLOAD_TOKEN_SECRET must have at least 32 bytes".into());
         }
-        let web_origins: Vec<_> = var("WEB_ORIGIN")
-            .unwrap_or_else(|| "http://localhost:3000".into())
-            .split(',')
-            .map(str::trim)
-            .filter(|origin| !origin.is_empty())
-            .map(|origin| match origin {
-                "*" => Err("WEB_ORIGIN must list origins, not *".to_string()),
-                _ => HeaderValue::from_str(origin)
-                    .map_err(|_| format!("WEB_ORIGIN has an invalid origin: {origin}")),
-            })
-            .collect::<Result<_, _>>()?;
-        if web_origins.is_empty() {
-            return Err("WEB_ORIGIN must list at least one origin".into());
-        }
-        let max_concurrent_jobs = number(var("MAX_CONCURRENT_JOBS"), "MAX_CONCURRENT_JOBS", 6)?;
+        let web_origins = web_origins(
+            &non_empty("WEB_ORIGIN").unwrap_or_else(|| "http://localhost:3000".into()),
+        )?;
+        let max_concurrent_jobs =
+            number(non_empty("MAX_CONCURRENT_JOBS"), "MAX_CONCURRENT_JOBS", 6)?;
         if !(1..=1024).contains(&max_concurrent_jobs) {
             return Err("MAX_CONCURRENT_JOBS must be between 1 and 1024".into());
         }
         Ok(Config {
-            port: number(var("PORT"), "PORT", 8080)?,
+            port: number(non_empty("PORT"), "PORT", 8080)?,
             database_url,
             token_secret,
             web_origins,
-            ad_wait_seconds: number(var("AD_WAIT_SECONDS"), "AD_WAIT_SECONDS", 30)?,
+            ad_wait_seconds: number(non_empty("AD_WAIT_SECONDS"), "AD_WAIT_SECONDS", 30)?,
             max_concurrent_jobs,
-            ytdlp_bin: var("YTDLP_BIN").unwrap_or_else(|| "yt-dlp".into()),
+            ytdlp_bin: non_empty("YTDLP_BIN").unwrap_or_else(|| "yt-dlp".into()),
             stream_idle_timeout: Duration::from_secs(30),
             stream_deadline: Duration::from_secs(10 * 60),
         })
     }
+}
+
+fn web_origins(list: &str) -> Result<Vec<HeaderValue>, String> {
+    let origins: Vec<HeaderValue> = list
+        .split(',')
+        .map(str::trim)
+        .filter(|origin| !origin.is_empty())
+        .map(|origin| match origin {
+            "*" => Err("WEB_ORIGIN must list origins, not *".to_string()),
+            _ => HeaderValue::from_str(origin)
+                .map_err(|_| format!("WEB_ORIGIN has an invalid origin: {origin}")),
+        })
+        .collect::<Result<_, _>>()?;
+    if origins.is_empty() {
+        return Err("WEB_ORIGIN must list at least one origin".into());
+    }
+    Ok(origins)
 }
 
 fn number<T: std::str::FromStr>(

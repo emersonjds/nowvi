@@ -33,8 +33,8 @@ fn error(status: StatusCode, code: &str) -> (StatusCode, Value) {
     (status, json!({ "error": code }))
 }
 
-/// Verifies each token against its row, then blanks the tokens and `available_at`, so the rest
-/// of the body compares to a literal. Returns the `format_id` each free token downloads.
+/// Verifies each token against its row, then blanks the tokens and `available_at` for a literal
+/// comparison of the rest of the body. Returns the `format_id` each free token downloads.
 fn verified_format_ids(info: &mut Value, url: &str) -> Vec<String> {
     let available_at = info["free"]["available_at"].as_u64().expect("available_at");
     let expected_available_at = token::now() + AD_WAIT_SECONDS;
@@ -54,15 +54,15 @@ fn verified_format_ids(info: &mut Value, url: &str) -> Vec<String> {
         };
         let claims = token::verify(&SECRET, download_token, available_at)
             .expect("a token valid from available_at");
-        assert_eq!(claims.u, url);
-        assert_eq!(claims.p, platform);
-        assert_eq!(format["ext"], claims.e.as_str());
-        assert_eq!(format["quality"], claims.q.as_str());
+        assert_eq!(claims.url, url);
+        assert_eq!(claims.platform, platform);
+        assert_eq!(format["ext"], claims.ext.as_str());
+        assert_eq!(format["quality"], claims.quality.as_str());
         assert_eq!(
             (claims.nbf, claims.exp),
             (available_at, available_at + token::LIFETIME_SECONDS)
         );
-        format_ids.push(claims.f);
+        format_ids.push(claims.format_id);
         format["token"] = json!("<token>");
     }
     info["free"]["token"] = json!("<token>");

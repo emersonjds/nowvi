@@ -13,7 +13,7 @@ use axum::body::{Body, Bytes};
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Extension, Query, State};
 use axum::http::header::{
-    CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_TYPE, X_CONTENT_TYPE_OPTIONS,
+    CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_TYPE, HeaderName, X_CONTENT_TYPE_OPTIONS,
 };
 use axum::response::{IntoResponse, Redirect, Response};
 use futures_util::StreamExt;
@@ -29,7 +29,7 @@ use crate::AppState;
 use crate::error::AppError;
 use crate::rate_limit::{ClientIp, JobGuard};
 use crate::token::{self, Claims};
-use ytdlp::Tier;
+use ytdlp::{Pick, Probe, Tier};
 
 const EXIT_TIMEOUT: Duration = Duration::from_secs(5);
 /// The body's queue: a client that stops reading stalls the queue, never the watchdog.
@@ -110,15 +110,7 @@ pub async fn info(
         let _slot = job_slot(&state, client)?;
         ytdlp::probe(&state.config.ytdlp_bin, &url, platform).await?
     };
-    if probe
-        .webpage_url
-        .as_deref()
-        .map(allowlist::check)
-        .is_none_or(|checked| checked.is_err())
-    {
-        tracing::warn!(platform, "yt-dlp resolved a page outside the allowlist");
-        return Err(AppError::ExtractFailed);
-    }
+    ensure_page_in_allowlist(&probe, platform)?;
     if probe
         .duration
         .is_some_and(|seconds| seconds > MAX_DURATION_SECONDS)
@@ -130,50 +122,16 @@ pub async fn info(
     let formats: Vec<FormatItem> = ytdlp::pick_formats(&probe.formats)
         .into_iter()
         .map(|pick| {
-            // It names the file and picks the Content-Type; anything odd stays out of the headers.
-            let ext = Some(pick.ext)
-                .filter(|ext| {
-                    (1..=5).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric())
-                })
-                .unwrap_or_else(|| "bin".into());
-            let quality = pick.quality.clone();
-            let token = (pick.tier == Tier::Free).then(|| {
-                token::sign(
-                    &state.config.token_secret,
-                    &Claims {
-                        u: url.to_string(),
-                        p: platform.into(),
-                        f: pick.format_id,
-                        e: ext.clone(),
-                        q: quality.clone(),
-                        nbf: available_at,
-                        exp: available_at + token::LIFETIME_SECONDS,
-                    },
-                )
-            });
-            FormatItem {
-                quality,
-                height: pick.height,
-                ext,
-                filesize_bytes: pick.filesize_bytes,
-                tier: pick.tier,
-                token,
-                h264: pick.h264,
-            }
+            format_item(
+                pick,
+                &state.config.token_secret,
+                &url,
+                platform,
+                available_at,
+            )
         })
         .collect();
-    let Some(free) = formats.iter().find(|format| format.tier == Tier::Free) else {
-        tracing::warn!(platform, "yt-dlp listed no progressive format up to 720p");
-        return Err(AppError::NotFound);
-    };
-    let free = Free {
-        height: free.height,
-        filesize_bytes: free.filesize_bytes,
-        token: free.token.clone().unwrap_or_default(),
-        available_at,
-        wait_seconds,
-        expires_in_seconds: wait_seconds + token::LIFETIME_SECONDS,
-    };
+    let free = free_offer(&formats, available_at, wait_seconds, platform)?;
     Ok(Json(InfoResponse {
         platform,
         title: probe.title.unwrap_or_default(),
@@ -188,13 +146,82 @@ pub async fn info(
     }))
 }
 
+fn ensure_page_in_allowlist(probe: &Probe, platform: &str) -> Result<(), AppError> {
+    let resolved_page = probe.webpage_url.as_deref().map(allowlist::check);
+    if resolved_page.is_none_or(|checked| checked.is_err()) {
+        tracing::warn!(platform, "yt-dlp resolved a page outside the allowlist");
+        return Err(AppError::ExtractFailed);
+    }
+    Ok(())
+}
+
+/// The extension names the downloaded file and picks its `Content-Type`.
+fn header_safe_ext(ext: String) -> String {
+    let is_safe =
+        (1..=5).contains(&ext.len()) && ext.bytes().all(|byte| byte.is_ascii_alphanumeric());
+    if is_safe { ext } else { "bin".into() }
+}
+
+fn format_item(
+    pick: Pick,
+    token_secret: &[u8],
+    url: &Url,
+    platform: &str,
+    available_at: u64,
+) -> FormatItem {
+    let ext = header_safe_ext(pick.ext);
+    let token = (pick.tier == Tier::Free).then(|| {
+        token::sign(
+            token_secret,
+            &Claims {
+                url: url.to_string(),
+                platform: platform.into(),
+                format_id: pick.format_id,
+                ext: ext.clone(),
+                quality: pick.quality.clone(),
+                nbf: available_at,
+                exp: available_at + token::LIFETIME_SECONDS,
+            },
+        )
+    });
+    FormatItem {
+        quality: pick.quality,
+        height: pick.height,
+        ext,
+        filesize_bytes: pick.filesize_bytes,
+        tier: pick.tier,
+        token,
+        h264: pick.h264,
+    }
+}
+
+fn free_offer(
+    formats: &[FormatItem],
+    available_at: u64,
+    wait_seconds: u64,
+    platform: &str,
+) -> Result<Free, AppError> {
+    let Some(first_free) = formats.iter().find(|format| format.tier == Tier::Free) else {
+        tracing::warn!(platform, "yt-dlp listed no progressive format up to 720p");
+        return Err(AppError::NotFound);
+    };
+    Ok(Free {
+        height: first_free.height,
+        filesize_bytes: first_free.filesize_bytes,
+        token: first_free.token.clone().unwrap_or_default(),
+        available_at,
+        wait_seconds,
+        expires_in_seconds: wait_seconds + token::LIFETIME_SECONDS,
+    })
+}
+
 #[derive(Deserialize)]
 pub struct DownloadQuery {
     token: String,
 }
 
-/// Owned by the download's watchdog task, so a client that stops reading cannot hold the child
-/// or the slot past the idle timeout or the deadline.
+/// Owned by the download's watchdog task: a client that stops reading never holds the child or
+/// the slot past the idle timeout or the deadline.
 struct Job {
     stdout: ReaderStream<ChildStdout>,
     child: Child,
@@ -238,45 +265,27 @@ async fn stream(
     let deadline = Instant::now() + state.config.stream_deadline;
     let Query(query) = query.map_err(|_| AppError::InvalidToken)?;
     let claims = token::verify(&state.config.token_secret, &query.token, token::now())?;
-    let url = Url::parse(&claims.u).map_err(|_| AppError::InvalidToken)?;
+    let url = Url::parse(&claims.url).map_err(|_| AppError::InvalidToken)?;
     let slot = job_slot(state, client)?;
-    let mut child = ytdlp::stream(&state.config.ytdlp_bin, &url, &claims.p, &claims.f)?;
+    let mut child = ytdlp::stream(
+        &state.config.ytdlp_bin,
+        &url,
+        &claims.platform,
+        &claims.format_id,
+    )?;
     let Some(stdout) = child.stdout.take() else {
         return Err(AppError::ExtractFailed);
     };
     let mut stdout = ReaderStream::new(stdout);
-    // The first chunk proves yt-dlp got the video; before it, a failure can still be a 502.
-    let first = match tokio::time::timeout(ytdlp::TIMEOUT, stdout.next()).await {
-        Ok(Some(Ok(chunk))) => chunk,
-        Ok(Some(Err(error))) => {
-            tracing::error!(%error, "reading yt-dlp stdout failed");
-            return Err(AppError::ExtractFailed);
-        }
-        Ok(None) => {
-            tracing::warn!(platform = claims.p, "yt-dlp ended without bytes");
-            return Err(AppError::ExtractFailed);
-        }
-        Err(_) => {
-            tracing::warn!(
-                platform = claims.p,
-                "yt-dlp download timed out before the first byte"
-            );
-            return Err(AppError::ExtractFailed);
-        }
-    };
-    let filename = format!("nowvi-{}-{}.{}", claims.p, token::now(), claims.e);
-    let content_type = match claims.e.as_str() {
-        "mp4" => "video/mp4",
-        "webm" => "video/webm",
-        _ => "application/octet-stream",
-    };
+    let first = first_chunk(&mut stdout, &claims.platform).await?;
+    let headers = attachment_headers(&claims.platform, &claims.ext);
     let job = Job {
         stdout,
         child,
         _slot: slot,
         pool: state.pool.clone(),
-        platform: claims.p,
-        quality: claims.q,
+        platform: claims.platform,
+        quality: claims.quality,
         deadline,
         idle_timeout: state.config.stream_idle_timeout,
     };
@@ -285,58 +294,63 @@ async fn stream(
     let body = futures_util::stream::once(std::future::ready(Ok(first))).chain(
         futures_util::stream::poll_fn(move |context| delivered.poll_recv(context)),
     );
-    Ok((
-        [
-            (CONTENT_TYPE, content_type.to_string()),
-            (
-                CONTENT_DISPOSITION,
-                format!("attachment; filename=\"{filename}\""),
-            ),
-            (CACHE_CONTROL, "no-store".to_string()),
-            (X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
-        ],
-        Body::from_stream(body),
-    )
-        .into_response())
+    Ok((headers, Body::from_stream(body)).into_response())
 }
 
-/// Feeds stdout to the body until the first of: the end of stdout, the client gone, no chunk
-/// moving for `idle_timeout`, or the deadline. Dropping the job at the end frees the slot.
+/// The first chunk proves yt-dlp got the video; before it, a failure can still be a 502.
+async fn first_chunk(
+    stdout: &mut ReaderStream<ChildStdout>,
+    platform: &str,
+) -> Result<Bytes, AppError> {
+    match tokio::time::timeout(ytdlp::TIMEOUT, stdout.next()).await {
+        Ok(Some(Ok(chunk))) => Ok(chunk),
+        Ok(Some(Err(error))) => {
+            tracing::error!(%error, "reading yt-dlp stdout failed");
+            Err(AppError::ExtractFailed)
+        }
+        Ok(None) => {
+            tracing::warn!(platform, "yt-dlp ended without bytes");
+            Err(AppError::ExtractFailed)
+        }
+        Err(_) => {
+            tracing::warn!(platform, "yt-dlp download timed out before the first byte");
+            Err(AppError::ExtractFailed)
+        }
+    }
+}
+
+fn attachment_headers(platform: &str, ext: &str) -> [(HeaderName, String); 4] {
+    let filename = format!("nowvi-{platform}-{}.{ext}", token::now());
+    let content_type = match ext {
+        "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        _ => "application/octet-stream",
+    };
+    [
+        (CONTENT_TYPE, content_type.to_string()),
+        (
+            CONTENT_DISPOSITION,
+            format!("attachment; filename=\"{filename}\""),
+        ),
+        (CACHE_CONTROL, "no-store".to_string()),
+        (X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
+    ]
+}
+
+fn timed_out(message: &'static str) -> io::Error {
+    io::Error::new(io::ErrorKind::TimedOut, message)
+}
+
+fn client_left() -> io::Error {
+    io::ErrorKind::ConnectionAborted.into()
+}
+
 async fn watchdog(mut job: Job, chunks: mpsc::Sender<io::Result<Bytes>>) {
     // Held back from the start: a full queue must still have room for the error that ends the body.
     let Ok(last_message) = chunks.clone().reserve_owned().await else {
         return stop(&mut job.child).await;
     };
-    let mut idle_deadline = Instant::now() + job.idle_timeout;
-    let ending = loop {
-        tokio::select! {
-            _ = tokio::time::sleep_until(job.deadline) => {
-                break Err(io::Error::new(
-                    io::ErrorKind::TimedOut,
-                    "the download ran out of time",
-                ));
-            }
-            _ = tokio::time::sleep_until(idle_deadline) => {
-                break Err(io::Error::new(
-                    io::ErrorKind::TimedOut,
-                    "no chunk moved for the idle timeout",
-                ));
-            }
-            _ = chunks.closed() => {
-                break Err(io::ErrorKind::ConnectionAborted.into());
-            }
-            next = next_chunk(&chunks, &mut job.stdout) => match next {
-                Some((queue_slot, Some(Ok(chunk)))) => {
-                    queue_slot.send(Ok(chunk));
-                    idle_deadline = Instant::now() + job.idle_timeout;
-                }
-                Some((_, Some(Err(error)))) => break Err(error),
-                Some((_, None)) => break Ok(()),
-                None => break Err(io::ErrorKind::ConnectionAborted.into()),
-            },
-        }
-    };
-    match ending {
+    match feed_body(&mut job, &chunks).await {
         Ok(()) => finish(job).await,
         Err(error) => {
             if error.kind() == io::ErrorKind::ConnectionAborted {
@@ -346,6 +360,32 @@ async fn watchdog(mut job: Job, chunks: mpsc::Sender<io::Result<Bytes>>) {
             }
             last_message.send(Err(error));
             stop(&mut job.child).await;
+        }
+    }
+}
+
+/// Feeds stdout to the body until the first of: the end of stdout, the client gone, no chunk
+/// moving for `idle_timeout`, or the deadline.
+async fn feed_body(job: &mut Job, chunks: &mpsc::Sender<io::Result<Bytes>>) -> io::Result<()> {
+    let mut idle_deadline = Instant::now() + job.idle_timeout;
+    loop {
+        tokio::select! {
+            _ = tokio::time::sleep_until(job.deadline) => {
+                return Err(timed_out("the download ran out of time"));
+            }
+            _ = tokio::time::sleep_until(idle_deadline) => {
+                return Err(timed_out("no chunk moved for the idle timeout"));
+            }
+            _ = chunks.closed() => return Err(client_left()),
+            next = next_chunk(chunks, &mut job.stdout) => match next {
+                Some((queue_slot, Some(Ok(chunk)))) => {
+                    queue_slot.send(Ok(chunk));
+                    idle_deadline = Instant::now() + job.idle_timeout;
+                }
+                Some((_, Some(Err(error)))) => return Err(error),
+                Some((_, None)) => return Ok(()),
+                None => return Err(client_left()),
+            },
         }
     }
 }
