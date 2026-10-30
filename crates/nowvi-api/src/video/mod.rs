@@ -1,6 +1,9 @@
 mod allowlist;
+#[cfg(test)]
+mod tests;
 mod ytdlp;
 
+use std::io;
 use std::time::Duration;
 
 use axum::Json;
@@ -14,8 +17,8 @@ use axum::response::{IntoResponse, Redirect, Response};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
-use tokio::process::Child;
-use tokio::sync::OwnedSemaphorePermit;
+use tokio::process::{Child, ChildStdout};
+use tokio::sync::{OwnedSemaphorePermit, mpsc};
 use tokio::time::Instant;
 use tokio_util::io::ReaderStream;
 use url::Url;
@@ -26,10 +29,9 @@ use crate::rate_limit::{ClientIp, JobGuard};
 use crate::token::{self, Claims};
 use ytdlp::Tier;
 
-/// The spec's stream limits: 30 s without a chunk ends it, and so do 10 min in total.
-const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
-const STREAM_DEADLINE: Duration = Duration::from_secs(10 * 60);
 const EXIT_TIMEOUT: Duration = Duration::from_secs(5);
+/// The body's queue: a client that stops reading stalls the queue, never the watchdog.
+const QUEUED_CHUNKS: usize = 8;
 const MAX_DURATION_SECONDS: f64 = 15.0 * 60.0;
 
 #[derive(Deserialize)]
@@ -189,17 +191,17 @@ pub struct DownloadQuery {
     token: String,
 }
 
-/// Owns the yt-dlp child and its job slot for as long as the body streams: a client that
-/// disconnects drops the body, which kills the child and frees the slot.
+/// Owned by the download's watchdog task, so a client that stops reading cannot hold the child
+/// or the slot past the idle timeout or the deadline.
 struct Job {
-    first: Option<Bytes>,
-    stdout: ReaderStream<tokio::process::ChildStdout>,
+    stdout: ReaderStream<ChildStdout>,
     child: Child,
     _slot: Slot,
     pool: PgPool,
     platform: String,
     quality: String,
     deadline: Instant,
+    idle_timeout: Duration,
 }
 
 /// A browser navigation: a failure goes back to the page as `/?erro=<code>`, never as JSON.
@@ -231,7 +233,7 @@ async fn stream(
     client: ClientIp,
     query: Result<Query<DownloadQuery>, QueryRejection>,
 ) -> Result<Response, AppError> {
-    let deadline = Instant::now() + STREAM_DEADLINE;
+    let deadline = Instant::now() + state.config.stream_deadline;
     let Query(query) = query.map_err(|_| AppError::InvalidToken)?;
     let claims = token::verify(&state.config.token_secret, &query.token, token::now())?;
     let url = Url::parse(&claims.u).map_err(|_| AppError::InvalidToken)?;
@@ -267,7 +269,6 @@ async fn stream(
         _ => "application/octet-stream",
     };
     let job = Job {
-        first: Some(first),
         stdout,
         child,
         _slot: slot,
@@ -275,30 +276,13 @@ async fn stream(
         platform: claims.p,
         quality: claims.q,
         deadline,
+        idle_timeout: state.config.stream_idle_timeout,
     };
-    // A `None` state ends the body; dropping the job kills the child and frees the slot.
-    let body = futures_util::stream::unfold(Some(job), |job| async move {
-        let mut job = job?;
-        if let Some(chunk) = job.first.take() {
-            return Some((Ok(chunk), Some(job)));
-        }
-        let until = job.deadline.min(Instant::now() + CHUNK_TIMEOUT);
-        match tokio::time::timeout_at(until, job.stdout.next()).await {
-            Ok(Some(Ok(chunk))) => Some((Ok(chunk), Some(job))),
-            Ok(Some(Err(error))) => Some((Err(error), None)),
-            Ok(None) => {
-                finish(job).await;
-                None
-            }
-            Err(_) => {
-                tracing::warn!(
-                    platform = job.platform,
-                    "yt-dlp download stalled or ran out of time"
-                );
-                Some((Err(std::io::ErrorKind::TimedOut.into()), None))
-            }
-        }
-    });
+    let (chunks, mut delivered) = mpsc::channel(QUEUED_CHUNKS);
+    tokio::spawn(watchdog(job, chunks));
+    let body = futures_util::stream::once(std::future::ready(Ok(first))).chain(
+        futures_util::stream::poll_fn(move |context| delivered.poll_recv(context)),
+    );
     Ok((
         [
             (CONTENT_TYPE, content_type.to_string()),
@@ -314,6 +298,74 @@ async fn stream(
         .into_response())
 }
 
+/// Feeds stdout to the body until the first of: the end of stdout, the client gone, no chunk
+/// moving for `idle_timeout`, or the deadline. Dropping the job at the end frees the slot.
+async fn watchdog(mut job: Job, chunks: mpsc::Sender<io::Result<Bytes>>) {
+    // Held back from the start: a full queue must still have room for the error that ends the body.
+    let Ok(last_message) = chunks.clone().reserve_owned().await else {
+        return stop(&mut job.child).await;
+    };
+    let mut idle_deadline = Instant::now() + job.idle_timeout;
+    let ending = loop {
+        tokio::select! {
+            _ = tokio::time::sleep_until(job.deadline) => {
+                break Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "the download ran out of time",
+                ));
+            }
+            _ = tokio::time::sleep_until(idle_deadline) => {
+                break Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "no chunk moved for the idle timeout",
+                ));
+            }
+            _ = chunks.closed() => {
+                break Err(io::ErrorKind::ConnectionAborted.into());
+            }
+            next = next_chunk(&chunks, &mut job.stdout) => match next {
+                Some((queue_slot, Some(Ok(chunk)))) => {
+                    queue_slot.send(Ok(chunk));
+                    idle_deadline = Instant::now() + job.idle_timeout;
+                }
+                Some((_, Some(Err(error)))) => break Err(error),
+                Some((_, None)) => break Ok(()),
+                None => break Err(io::ErrorKind::ConnectionAborted.into()),
+            },
+        }
+    };
+    match ending {
+        Ok(()) => finish(job).await,
+        Err(error) => {
+            tracing::warn!(platform = job.platform, %error, "yt-dlp download stopped");
+            last_message.send(Err(error));
+            stop(&mut job.child).await;
+        }
+    }
+}
+
+/// Room in the body's queue first, then the next stdout chunk; `None` once the body is gone.
+async fn next_chunk<'queue>(
+    chunks: &'queue mpsc::Sender<io::Result<Bytes>>,
+    stdout: &mut ReaderStream<ChildStdout>,
+) -> Option<(
+    mpsc::Permit<'queue, io::Result<Bytes>>,
+    Option<io::Result<Bytes>>,
+)> {
+    let queue_slot = chunks.reserve().await.ok()?;
+    Some((queue_slot, stdout.next().await))
+}
+
+async fn stop(child: &mut Child) {
+    let _ = child.start_kill();
+    if tokio::time::timeout(EXIT_TIMEOUT, child.wait())
+        .await
+        .is_err()
+    {
+        tracing::error!("yt-dlp did not exit after SIGKILL");
+    }
+}
+
 /// stdout closed: a clean exit counts as a download; a failed insert is only logged.
 async fn finish(mut job: Job) {
     let Ok(exit) = tokio::time::timeout(EXIT_TIMEOUT, job.child.wait()).await else {
@@ -321,8 +373,7 @@ async fn finish(mut job: Job) {
             platform = job.platform,
             "yt-dlp kept running after stdout closed"
         );
-        let _ = job.child.kill().await;
-        return;
+        return stop(&mut job.child).await;
     };
     match exit {
         Ok(status) if status.success() => {

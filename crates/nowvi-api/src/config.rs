@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use axum::http::HeaderValue;
 
 /// The env of the spec's "Env" table, read once at boot.
@@ -9,6 +11,9 @@ pub struct Config {
     pub ad_wait_seconds: u64,
     pub max_concurrent_jobs: usize,
     pub ytdlp_bin: String,
+    /// The spec's stream limits, fixed outside tests: 30 s without a chunk moving, 10 min in all.
+    pub stream_idle_timeout: Duration,
+    pub stream_deadline: Duration,
 }
 
 impl Config {
@@ -47,6 +52,8 @@ impl Config {
             ad_wait_seconds: number(var("AD_WAIT_SECONDS"), "AD_WAIT_SECONDS", 30)?,
             max_concurrent_jobs,
             ytdlp_bin: var("YTDLP_BIN").unwrap_or_else(|| "yt-dlp".into()),
+            stream_idle_timeout: Duration::from_secs(30),
+            stream_deadline: Duration::from_secs(10 * 60),
         })
     }
 }
