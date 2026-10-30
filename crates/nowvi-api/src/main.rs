@@ -55,7 +55,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let cors = CorsLayer::new()
         .allow_origin(AllowOrigin::list(config.web_origins.clone()))
         .allow_methods([Method::GET, Method::POST])
-        .allow_headers([CONTENT_TYPE]);
+        .allow_headers([CONTENT_TYPE])
+        .expose_headers([header::CONTENT_DISPOSITION]);
     let address = std::net::SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, config.port));
     let state = AppState {
         pool,
