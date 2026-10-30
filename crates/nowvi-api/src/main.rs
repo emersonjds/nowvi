@@ -4,6 +4,8 @@ mod error;
 mod orders;
 mod rate_limit;
 #[cfg(test)]
+mod router_tests;
+#[cfg(test)]
 mod test_support;
 mod token;
 mod video;
