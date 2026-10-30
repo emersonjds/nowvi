@@ -11,8 +11,11 @@ import { getDictionary, resolveLocale } from "@/i18n/dictionary";
 
 import "../globals.css";
 
+// next/font emits the @font-face of every subset (latin-ext, vietnamese, cyrillic-ext) with its
+// unicode-range; `subsets` only picks which files get preloaded.
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-jakarta",
 });
 
