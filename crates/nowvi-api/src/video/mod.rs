@@ -337,7 +337,11 @@ async fn watchdog(mut job: Job, chunks: mpsc::Sender<io::Result<Bytes>>) {
     match ending {
         Ok(()) => finish(job).await,
         Err(error) => {
-            tracing::warn!(platform = job.platform, %error, "yt-dlp download stopped");
+            if error.kind() == io::ErrorKind::ConnectionAborted {
+                tracing::info!(platform = job.platform, "client left the download");
+            } else {
+                tracing::warn!(platform = job.platform, %error, "yt-dlp download stopped");
+            }
             last_message.send(Err(error));
             stop(&mut job.child).await;
         }
