@@ -23,9 +23,9 @@ import { AdSlot } from "./ad-slot";
 import { formatMegabytes, qualityLabel } from "./quality-options";
 import { useWhatsAppShare, WhatsAppShareButton } from "./whatsapp-share";
 
-const phaseOf = (downloading: boolean, done: boolean) => {
+const phaseOf = (downloading: boolean, unlocked: boolean) => {
   if (downloading) return "downloading";
-  if (done) return "ready";
+  if (unlocked) return "ready";
   return "waiting";
 };
 
@@ -55,21 +55,21 @@ export const WaitingPanel = ({
   const copy = useDictionary().waiting;
   const [now, setNow] = useState(startedAt);
   const [downloading, setDownloading] = useState(false);
-  const remainingMs = Math.max(0, readyAt - now);
-  const done = remainingMs === 0;
-  const phase = phaseOf(downloading, done);
-  const seconds = Math.ceil(remainingMs / 1000);
-  const progress = 100 - (remainingMs / Math.max(1, readyAt - startedAt)) * 100;
+  const remainingMilliseconds = Math.max(0, readyAt - now);
+  const unlocked = remainingMilliseconds === 0;
+  const phase = phaseOf(downloading, unlocked);
+  const remainingSeconds = Math.ceil(remainingMilliseconds / 1000);
+  const progress = 100 - (remainingMilliseconds / Math.max(1, readyAt - startedAt)) * 100;
   const whatsApp = useWhatsAppShare({ formats, chosen: format, active: phase !== "waiting" });
   const savedVideo = whatsApp.savedVideo;
   const downloadHref = savedVideo?.href ?? downloadUrl(format.token);
   const downloadName = savedVideo?.fileName ?? "";
 
   useEffect(() => {
-    if (done) return;
-    const id = window.setInterval(() => setNow(Date.now()), 250);
-    return () => window.clearInterval(id);
-  }, [done]);
+    if (unlocked) return;
+    const intervalId = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(intervalId);
+  }, [unlocked]);
 
   const handleDownload = (event: MouseEvent<HTMLAnchorElement>) => {
     if (savedVideo || Date.now() <= expiresAt) {
@@ -95,7 +95,7 @@ export const WaitingPanel = ({
           {phase === "ready" && copy.readyHint}
           {phase === "waiting" && (
             <>
-              {copy.unlocksIn} <strong className="text-primary">{seconds}s</strong>. {copy.keepOpen}
+              {copy.unlocksIn} <strong className="text-primary">{remainingSeconds}s</strong>. {copy.keepOpen}
             </>
           )}
         </p>
@@ -144,7 +144,7 @@ export const WaitingPanel = ({
         {phase === "waiting" && (
           <Button disabled variant="secondary" className="h-12 text-base font-bold">
             <LockIcon className="size-5" aria-hidden />
-            {fill(copy.waitingAd, { seconds })}
+            {fill(copy.waitingAd, { seconds: remainingSeconds })}
           </Button>
         )}
         {downloading ? null : (
