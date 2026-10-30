@@ -1,65 +1,18 @@
 use std::path::PathBuf;
-use std::sync::Arc;
 use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use axum::http::header::{CONTENT_TYPE, LOCATION};
-use axum::http::{HeaderValue, Request, StatusCode};
+use axum::http::header::CONTENT_TYPE;
+use axum::http::{Request, StatusCode};
 use axum::response::Response;
-use axum::routing::get;
 use futures_util::StreamExt;
-use sqlx::PgPool;
-use sqlx::postgres::PgPoolOptions;
-use tokio::sync::Semaphore;
-use tower::ServiceExt;
 
-use crate::AppState;
-use crate::config::Config;
-use crate::rate_limit::RateLimits;
+use crate::test_support::{
+    CLIENT_IP, Limits, SECRET, all_slots_free, app, back_to_page_code, eventually, send, test_pool,
+    unused_pool,
+};
 use crate::token::{self, Claims};
-
-const FAKE_YTDLP: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/tests/fixtures/fake-ytdlp.sh");
-const MAX_JOBS: usize = 2;
-const LONG: Duration = Duration::from_secs(60);
-
-struct Limits {
-    idle_timeout: Duration,
-    deadline: Duration,
-}
-
-fn app(pool: PgPool, limits: Limits) -> (Router, AppState) {
-    let state = AppState {
-        pool,
-        config: Arc::new(Config {
-            port: 0,
-            database_url: String::new(),
-            token_secret: vec![7; 32],
-            web_origins: vec![HeaderValue::from_static("http://localhost:3000")],
-            ad_wait_seconds: 0,
-            max_concurrent_jobs: MAX_JOBS,
-            ytdlp_bin: FAKE_YTDLP.into(),
-            stream_idle_timeout: limits.idle_timeout,
-            stream_deadline: limits.deadline,
-        }),
-        jobs: Arc::new(Semaphore::new(MAX_JOBS)),
-        limits: Arc::new(RateLimits::default()),
-    };
-    let router = Router::new()
-        .route("/api/download", get(super::download))
-        .layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            crate::rate_limit::limit,
-        ))
-        .with_state(state.clone());
-    (router, state)
-}
-
-fn unused_pool() -> PgPool {
-    PgPoolOptions::new()
-        .connect_lazy("postgres://nowvi@127.0.0.1:1/unused")
-        .expect("a lazy pool never connects")
-}
 
 /// A fake yt-dlp run: `mode` picks what the fixture prints, `pidfile` is where it writes its pid.
 struct FakeRun {
@@ -85,7 +38,7 @@ impl FakeRun {
 async fn download(router: &Router, run: &FakeRun, platform: &str) -> Response {
     let now = token::now();
     let download_token = token::sign(
-        &[7; 32],
+        &SECRET,
         &Claims {
             u: "https://x.com/i/status/1".into(),
             p: platform.into(),
@@ -97,14 +50,10 @@ async fn download(router: &Router, run: &FakeRun, platform: &str) -> Response {
         },
     );
     let request = Request::get(format!("/api/download?token={download_token}"))
-        .header("x-real-ip", "203.0.113.7")
+        .header("x-real-ip", CLIENT_IP)
         .body(Body::empty())
         .expect("a valid request");
-    router
-        .clone()
-        .oneshot(request)
-        .await
-        .expect("the router never fails")
+    send(router, request).await
 }
 
 fn is_alive(pid: &str) -> bool {
@@ -115,36 +64,13 @@ fn is_alive(pid: &str) -> bool {
         .is_ok_and(|status| status.success())
 }
 
-/// Polls `check` for up to 5 s.
-async fn eventually(check: impl Fn() -> bool) -> bool {
-    for _ in 0..100 {
-        if check() {
-            return true;
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
-    }
-    check()
-}
-
-fn all_slots_free(state: &AppState) -> bool {
-    state.jobs.available_permits() == MAX_JOBS
-}
-
-fn is_busy(response: &Response) -> bool {
-    response.status() == StatusCode::SEE_OTHER
-        && response
-            .headers()
-            .get(LOCATION)
-            .is_some_and(|location| location == "http://localhost:3000/?erro=busy")
-}
-
 #[tokio::test]
 async fn a_client_that_never_reads_gives_its_slot_back_after_the_idle_timeout() {
     let (router, state) = app(
         unused_pool(),
         Limits {
             idle_timeout: Duration::from_secs(1),
-            deadline: LONG,
+            ..Limits::default()
         },
     );
     let first_run = FakeRun::new("flood", "idle-first");
@@ -152,7 +78,10 @@ async fn a_client_that_never_reads_gives_its_slot_back_after_the_idle_timeout() 
     let _unread_first = download(&router, &first_run, "x").await;
     let _unread_second = download(&router, &second_run, "x").await;
     let third_run = FakeRun::new("flood", "idle-third");
-    assert!(is_busy(&download(&router, &third_run, "x").await));
+    assert_eq!(
+        back_to_page_code(&download(&router, &third_run, "x").await),
+        Some("busy")
+    );
 
     assert!(eventually(|| all_slots_free(&state)).await);
     assert!(!is_alive(&first_run.pid()));
@@ -163,13 +92,7 @@ async fn a_client_that_never_reads_gives_its_slot_back_after_the_idle_timeout() 
 
 #[tokio::test]
 async fn a_client_that_disconnects_mid_stream_kills_yt_dlp_and_frees_the_slot() {
-    let (router, state) = app(
-        unused_pool(),
-        Limits {
-            idle_timeout: LONG,
-            deadline: LONG,
-        },
-    );
+    let (router, state) = app(unused_pool(), Limits::default());
     let run = FakeRun::new("flood", "disconnect");
     let response = download(&router, &run, "x").await;
     let mut body = response.into_body().into_data_stream();
@@ -185,19 +108,9 @@ async fn a_client_that_disconnects_mid_stream_kills_yt_dlp_and_frees_the_slot() 
 
 #[tokio::test]
 async fn a_complete_download_is_recorded_and_frees_the_slot() {
-    let database_url = std::env::var("TEST_DATABASE_URL")
-        .unwrap_or_else(|_| "postgres://postgres:nowvi@127.0.0.1:55432/postgres".into());
-    let pool = crate::db::connect(&database_url)
-        .await
-        .expect("Postgres for the tests: docker run -p 55432:5432 postgres:16-alpine");
+    let pool = test_pool().await;
     let platform = format!("test-{}-{}", std::process::id(), token::now());
-    let (router, state) = app(
-        pool.clone(),
-        Limits {
-            idle_timeout: LONG,
-            deadline: LONG,
-        },
-    );
+    let (router, state) = app(pool.clone(), Limits::default());
     let run = FakeRun::new("complete", "complete");
     let response = download(&router, &run, &platform).await;
     assert_eq!(response.status(), StatusCode::OK);
@@ -229,8 +142,8 @@ async fn a_download_past_the_deadline_kills_yt_dlp_and_fails_the_body() {
     let (router, state) = app(
         unused_pool(),
         Limits {
-            idle_timeout: LONG,
             deadline: Duration::from_secs(1),
+            ..Limits::default()
         },
     );
     let run = FakeRun::new("drip", "deadline");

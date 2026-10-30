@@ -1,6 +1,6 @@
 mod allowlist;
 #[cfg(test)]
-mod tests;
+mod download_tests;
 mod ytdlp;
 
 use std::io;
