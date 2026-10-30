@@ -191,6 +191,7 @@ export const es = {
     back: "Volver al inicio",
   },
   offers: { free: "Gratis hasta 720p", fullHd: "Full HD 1080p" },
+  llms: { pages: "Páginas", languages: "Idiomas", fullText: "Todas las preguntas frecuentes, en todos los idiomas." },
   client: {
     features: { fullHdPix: false },
     errors: {

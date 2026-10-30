@@ -4,3 +4,5 @@ export const APP_CONFIG: { name: string; url: string; profiles: string[] } = {
   // Organization.sameAs: add a profile URL only once the profile is live (SEO-22).
   profiles: [],
 };
+
+export const absoluteUrl = (path: string) => new URL(path, APP_CONFIG.url).href;

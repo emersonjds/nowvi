@@ -196,6 +196,7 @@ export const id = {
     back: "Kembali ke beranda",
   },
   offers: { free: "Gratis sampai 720p", fullHd: "Full HD 1080p" },
+  llms: { pages: "Halaman", languages: "Bahasa", fullText: "Semua FAQ, dalam semua bahasa." },
   client: {
     features: { fullHdPix: false },
     errors: {

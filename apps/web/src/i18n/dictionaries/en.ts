@@ -188,6 +188,7 @@ export const en = {
     back: "Back to home",
   },
   offers: { free: "Free up to 720p", fullHd: "Full HD 1080p" },
+  llms: { pages: "Pages", languages: "Languages", fullText: "Every FAQ, in every language." },
   client: {
     features: { fullHdPix: false },
     errors: {

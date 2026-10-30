@@ -188,6 +188,7 @@ export const ptBr = {
     back: "Voltar para o início",
   },
   offers: { free: "Grátis até 720p", fullHd: "Full HD 1080p" },
+  llms: { pages: "Páginas", languages: "Idiomas", fullText: "Todas as perguntas frequentes, em todos os idiomas." },
   client: {
     features: { fullHdPix: true },
     errors: {
