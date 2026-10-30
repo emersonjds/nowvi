@@ -4,7 +4,7 @@ mod ytdlp;
 use axum::Json;
 use axum::body::{Body, Bytes};
 use axum::extract::rejection::{JsonRejection, QueryRejection};
-use axum::extract::{Query, State};
+use axum::extract::{Extension, Query, State};
 use axum::http::header::{CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_TYPE};
 use axum::response::{IntoResponse, Response};
 use futures_util::StreamExt;
@@ -16,6 +16,7 @@ use tokio_util::io::ReaderStream;
 
 use crate::AppState;
 use crate::error::AppError;
+use crate::rate_limit::{ClientIp, JobGuard};
 use crate::token::{self, Claims};
 
 #[derive(Deserialize)]
@@ -42,22 +43,32 @@ pub struct Free {
     available_at: u64,
 }
 
-fn job_slot(state: &AppState) -> Result<OwnedSemaphorePermit, AppError> {
-    state
-        .jobs
-        .clone()
-        .try_acquire_owned()
-        .map_err(|_| AppError::Busy)
+/// A yt-dlp job: one of the client's two and one of the global semaphore.
+struct Slot {
+    _client: JobGuard,
+    _permit: OwnedSemaphorePermit,
+}
+
+fn job_slot(state: &AppState, client: ClientIp) -> Result<Slot, AppError> {
+    Ok(Slot {
+        _client: state.limits.start_job(client)?,
+        _permit: state
+            .jobs
+            .clone()
+            .try_acquire_owned()
+            .map_err(|_| AppError::Busy)?,
+    })
 }
 
 pub async fn info(
     State(state): State<AppState>,
+    Extension(client): Extension<ClientIp>,
     body: Result<Json<InfoRequest>, JsonRejection>,
 ) -> Result<Json<InfoResponse>, AppError> {
     let Json(request) = body.map_err(|_| AppError::InvalidUrl)?;
     let (url, platform) = allowlist::check(&request.url)?;
     let probe = {
-        let _slot = job_slot(&state)?;
+        let _slot = job_slot(&state, client)?;
         ytdlp::probe(&state.config.ytdlp_bin, url.as_str()).await?
     };
     let format_id = probe.format_id.ok_or_else(|| {
@@ -107,18 +118,19 @@ struct Job {
     first: Option<Bytes>,
     stdout: ReaderStream<tokio::process::ChildStdout>,
     child: Child,
-    _slot: OwnedSemaphorePermit,
+    _slot: Slot,
     pool: PgPool,
     platform: String,
 }
 
 pub async fn download(
     State(state): State<AppState>,
+    Extension(client): Extension<ClientIp>,
     query: Result<Query<DownloadQuery>, QueryRejection>,
 ) -> Result<Response, AppError> {
     let Query(query) = query.map_err(|_| AppError::InvalidToken)?;
     let claims = token::verify(&state.config.token_secret, &query.token, token::now())?;
-    let slot = job_slot(&state)?;
+    let slot = job_slot(&state, client)?;
     let mut child = ytdlp::stream(&state.config.ytdlp_bin, &claims.u, &claims.f)?;
     let Some(stdout) = child.stdout.take() else {
         return Err(AppError::ExtractFailed);
