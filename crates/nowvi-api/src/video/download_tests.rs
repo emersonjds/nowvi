@@ -3,10 +3,13 @@ use std::time::Duration;
 
 use axum::Router;
 use axum::body::Body;
-use axum::http::header::CONTENT_TYPE;
+use axum::http::header::{
+    CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_TYPE, X_CONTENT_TYPE_OPTIONS,
+};
 use axum::http::{Request, StatusCode};
 use axum::response::Response;
 use futures_util::StreamExt;
+use sqlx::PgPool;
 
 use crate::test_support::{
     CLIENT_IP, Limits, SECRET, all_slots_free, app, back_to_page_code, eventually, send, test_pool,
@@ -35,25 +38,47 @@ impl FakeRun {
     }
 }
 
-async fn download(router: &Router, run: &FakeRun, platform: &str) -> Response {
+/// A token valid now for `run`, as `/api/info` would sign it.
+fn claims(run: &FakeRun, platform: &str) -> Claims {
     let now = token::now();
-    let download_token = token::sign(
-        &SECRET,
-        &Claims {
-            u: "https://x.com/i/status/1".into(),
-            p: platform.into(),
-            f: format!("{}:{}", run.mode, run.pidfile.display()),
-            e: "mp4".into(),
-            q: "720p".into(),
-            nbf: now - 1,
-            exp: now + 600,
-        },
-    );
+    Claims {
+        u: "https://x.com/i/status/1".into(),
+        p: platform.into(),
+        f: format!("{}:{}", run.mode, run.pidfile.display()),
+        e: "mp4".into(),
+        q: "720p".into(),
+        nbf: now - 1,
+        exp: now + 600,
+    }
+}
+
+async fn download_with(router: &Router, download_token: &str) -> Response {
     let request = Request::get(format!("/api/download?token={download_token}"))
         .header("x-real-ip", CLIENT_IP)
         .body(Body::empty())
         .expect("a valid request");
     send(router, request).await
+}
+
+async fn download(router: &Router, run: &FakeRun, platform: &str) -> Response {
+    download_with(router, &token::sign(&SECRET, &claims(run, platform))).await
+}
+
+/// Polls `downloads` until the platform has a row.
+async fn recorded_qualities(pool: &PgPool, platform: &str) -> Vec<String> {
+    for _ in 0..100 {
+        let qualities: Vec<String> =
+            sqlx::query_scalar("SELECT quality FROM downloads WHERE platform = $1")
+                .bind(platform)
+                .fetch_all(pool)
+                .await
+                .expect("reading downloads");
+        if !qualities.is_empty() {
+            return qualities;
+        }
+        tokio::time::sleep(Duration::from_millis(50)).await;
+    }
+    Vec::new()
 }
 
 fn is_alive(pid: &str) -> bool {
@@ -107,34 +132,155 @@ async fn a_client_that_disconnects_mid_stream_kills_yt_dlp_and_frees_the_slot() 
 }
 
 #[tokio::test]
-async fn a_complete_download_is_recorded_and_frees_the_slot() {
+async fn a_complete_download_records_its_quality_and_frees_the_slot() {
     let pool = test_pool().await;
     let platform = format!("test-{}-{}", std::process::id(), token::now());
     let (router, state) = app(pool.clone(), Limits::default());
     let run = FakeRun::new("complete", "complete");
-    let response = download(&router, &run, &platform).await;
+    let download_token = token::sign(
+        &SECRET,
+        &Claims {
+            q: "480p".into(),
+            ..claims(&run, &platform)
+        },
+    );
+    let response = download_with(&router, &download_token).await;
     assert_eq!(response.status(), StatusCode::OK);
-    assert_eq!(response.headers()[CONTENT_TYPE], "video/mp4");
     let video = axum::body::to_bytes(response.into_body(), 1024)
         .await
         .expect("the whole video");
     assert_eq!(&video[..], b"nowvi-video-bytes");
 
     assert!(eventually(|| all_slots_free(&state)).await);
-    let mut recorded = 0;
-    for _ in 0..100 {
-        recorded =
-            sqlx::query_scalar::<_, i64>("SELECT count(*) FROM downloads WHERE platform = $1")
-                .bind(&platform)
-                .fetch_one(&pool)
-                .await
-                .expect("counting downloads");
-        if recorded > 0 {
-            break;
-        }
-        tokio::time::sleep(Duration::from_millis(50)).await;
+    assert_eq!(recorded_qualities(&pool, &platform).await, ["480p"]);
+}
+
+#[tokio::test]
+async fn a_token_signed_before_the_quality_claim_records_720p() {
+    let pool = test_pool().await;
+    let platform = format!("test-old-{}-{}", std::process::id(), token::now());
+    let (router, _) = app(pool.clone(), Limits::default());
+    let run = FakeRun::new("complete", "old-token");
+    let download_token = token::sign(
+        &SECRET,
+        &Claims {
+            q: String::new(),
+            ..claims(&run, &platform)
+        },
+    );
+    let response = download_with(&router, &download_token).await;
+    axum::body::to_bytes(response.into_body(), 1024)
+        .await
+        .expect("the whole video");
+
+    assert_eq!(recorded_qualities(&pool, &platform).await, ["720p"]);
+}
+
+#[tokio::test]
+async fn a_download_names_the_file_and_picks_the_content_type_by_ext() {
+    let (router, state) = app(unused_pool(), Limits::default());
+    let content_types = [
+        ("mp4", "video/mp4"),
+        ("webm", "video/webm"),
+        ("3gp", "application/octet-stream"),
+    ];
+    for (ext, content_type) in content_types {
+        let run = FakeRun::new("complete", &format!("ext-{ext}"));
+        let download_token = token::sign(
+            &SECRET,
+            &Claims {
+                e: ext.into(),
+                ..claims(&run, "x")
+            },
+        );
+        let before = token::now();
+        let response = download_with(&router, &download_token).await;
+        assert_eq!(response.status(), StatusCode::OK);
+        let headers = response.headers();
+        assert_eq!(headers[CONTENT_TYPE], content_type);
+        assert_eq!(headers[CACHE_CONTROL], "no-store");
+        assert_eq!(headers[X_CONTENT_TYPE_OPTIONS], "nosniff");
+        let disposition = headers[CONTENT_DISPOSITION].to_str().expect("ASCII");
+        let unix: u64 = disposition
+            .strip_prefix("attachment; filename=\"nowvi-x-")
+            .and_then(|rest| rest.strip_suffix(&format!(".{ext}\"")))
+            .and_then(|unix| unix.parse().ok())
+            .unwrap_or_else(|| panic!("{disposition}"));
+        assert!((before..=token::now()).contains(&unix));
+        axum::body::to_bytes(response.into_body(), 1024)
+            .await
+            .expect("the whole video");
+        assert!(eventually(|| all_slots_free(&state)).await);
     }
-    assert_eq!(recorded, 1);
+}
+
+#[tokio::test]
+async fn a_failed_download_goes_back_to_the_page_with_its_code() {
+    let (router, _) = app(unused_pool(), Limits::default());
+    let run = FakeRun::new("empty", "failed");
+    let now = token::now();
+    let signed = |claims: Claims| token::sign(&SECRET, &claims);
+    let valid_token = signed(claims(&run, "x"));
+    let (_, valid_signature) = valid_token.split_once('.').expect("two parts");
+    let other_token = signed(Claims {
+        f: "other-format".into(),
+        ..claims(&run, "x")
+    });
+    let (other_payload, _) = other_token.split_once('.').expect("two parts");
+    let failures = [
+        ("garbage".to_owned(), "invalid_token"),
+        (
+            format!("{other_payload}.{valid_signature}"),
+            "invalid_token",
+        ),
+        (
+            signed(Claims {
+                u: "not a url".into(),
+                ..claims(&run, "x")
+            }),
+            "invalid_token",
+        ),
+        (
+            signed(Claims {
+                nbf: now + 60,
+                exp: now + 960,
+                ..claims(&run, "x")
+            }),
+            "too_early",
+        ),
+        (
+            signed(Claims {
+                nbf: now - 960,
+                exp: now - 1,
+                ..claims(&run, "x")
+            }),
+            "expired",
+        ),
+        (valid_token.clone(), "extract_failed"),
+    ];
+    for (download_token, code) in failures {
+        let response = download_with(&router, &download_token).await;
+        assert_eq!(back_to_page_code(&response), Some(code), "{download_token}");
+    }
+    let without_token = Request::get("/api/download")
+        .header("x-real-ip", CLIENT_IP)
+        .body(Body::empty())
+        .expect("a valid request");
+    assert_eq!(
+        back_to_page_code(&send(&router, without_token).await),
+        Some("invalid_token")
+    );
+}
+
+#[tokio::test]
+async fn past_the_burst_a_download_goes_back_to_the_page_as_rate_limited() {
+    let (router, _) = app(unused_pool(), Limits::default());
+    for _ in 0..10 {
+        let response = download_with(&router, "garbage").await;
+        assert_eq!(back_to_page_code(&response), Some("invalid_token"));
+    }
+    let response = download_with(&router, "garbage").await;
+    assert_eq!(back_to_page_code(&response), Some("rate_limited"));
 }
 
 #[tokio::test]
