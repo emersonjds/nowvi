@@ -36,7 +36,8 @@ PR para a `main`. O Railway faz o deploy a partir da `main`.
 | web | opus | `apps/web` |
 | devops | opus | Docker, Railway e CI |
 | qa | opus | revisão adversarial, só leitura |
-| growth | sonnet | recomendação de SEO, GEO, ads e copy |
+| growth | sonnet | pesquisa de mercado, ads e copy (recomendação) |
+| seo | opus | SEO técnico, GEO e conteúdo por idioma em `apps/web`, roadmap em `docs/specs/seo/` |
 
 ## Exceção da v0
 
