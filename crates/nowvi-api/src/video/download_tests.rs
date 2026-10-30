@@ -156,6 +156,25 @@ async fn a_complete_download_records_its_quality_and_frees_the_slot() {
 }
 
 #[tokio::test]
+async fn a_download_cut_by_a_yt_dlp_error_fails_the_body_and_records_nothing() {
+    let pool = test_pool().await;
+    let platform = format!("test-partial-{}-{}", std::process::id(), token::now());
+    let (router, state) = app(pool.clone(), Limits::default());
+    let run = FakeRun::new("partial", "partial");
+    let response = download_with(&router, &token::sign(&SECRET, &claims(&run, &platform))).await;
+    assert_eq!(response.status(), StatusCode::OK);
+
+    let body = axum::body::to_bytes(response.into_body(), 1024).await;
+
+    assert!(
+        body.is_err(),
+        "a truncated video must not end like a complete one"
+    );
+    assert!(eventually(|| all_slots_free(&state)).await);
+    assert!(recorded_qualities(&pool, &platform).await.is_empty());
+}
+
+#[tokio::test]
 async fn a_token_signed_before_the_quality_claim_records_720p() {
     let pool = test_pool().await;
     let platform = format!("test-old-{}-{}", std::process::id(), token::now());

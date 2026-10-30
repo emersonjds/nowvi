@@ -34,6 +34,7 @@ use ytdlp::{Pick, Probe, Tier};
 const EXIT_TIMEOUT: Duration = Duration::from_secs(5);
 /// The body's queue: a client that stops reading stalls the queue, never the watchdog.
 const QUEUED_CHUNKS: usize = 8;
+const STREAM_READ_BYTES: usize = 64 * 1024;
 const MAX_DURATION_SECONDS: f64 = 15.0 * 60.0;
 
 #[derive(Deserialize)]
@@ -276,7 +277,7 @@ async fn stream(
     let Some(stdout) = child.stdout.take() else {
         return Err(AppError::ExtractFailed);
     };
-    let mut stdout = ReaderStream::new(stdout);
+    let mut stdout = ReaderStream::with_capacity(stdout, STREAM_READ_BYTES);
     let first = first_chunk(&mut stdout, &claims.platform).await?;
     let headers = attachment_headers(&claims.platform, &claims.ext);
     let job = Job {
@@ -351,7 +352,7 @@ async fn watchdog(mut job: Job, chunks: mpsc::Sender<io::Result<Bytes>>) {
         return stop(&mut job.child).await;
     };
     match feed_body(&mut job, &chunks).await {
-        Ok(()) => finish(job).await,
+        Ok(()) => finish(job, last_message).await,
         Err(error) => {
             if error.kind() == io::ErrorKind::ConnectionAborted {
                 tracing::info!(platform = job.platform, "client left the download");
@@ -413,12 +414,17 @@ async fn stop(child: &mut Child) {
 }
 
 /// stdout closed: a clean exit counts as a download; a failed insert is only logged.
-async fn finish(mut job: Job) {
+/// Any ending but a clean yt-dlp exit fails the body: a chunked body that just stops reads as a
+/// complete file to the browser.
+async fn finish(mut job: Job, last_message: mpsc::OwnedPermit<io::Result<Bytes>>) {
     let Ok(exit) = tokio::time::timeout(EXIT_TIMEOUT, job.child.wait()).await else {
         tracing::warn!(
             platform = job.platform,
             "yt-dlp kept running after stdout closed"
         );
+        last_message.send(Err(io::Error::other(
+            "yt-dlp kept running after stdout closed",
+        )));
         return stop(&mut job.child).await;
     };
     match exit {
@@ -429,7 +435,13 @@ async fn finish(mut job: Job) {
                 job.quality,
             ));
         }
-        Ok(status) => tracing::warn!(%status, "yt-dlp download exited with an error"),
-        Err(error) => tracing::error!(%error, "yt-dlp download wait failed"),
+        Ok(status) => {
+            tracing::warn!(%status, "yt-dlp download exited with an error");
+            last_message.send(Err(io::Error::other("yt-dlp exited with an error")));
+        }
+        Err(error) => {
+            tracing::error!(%error, "yt-dlp download wait failed");
+            last_message.send(Err(io::Error::other("yt-dlp wait failed")));
+        }
     }
 }
