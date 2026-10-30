@@ -28,7 +28,14 @@ const subscribeNever = () => () => undefined;
 
 const canShareFromPhone = () => canShareFiles() && window.matchMedia("(pointer: coarse)").matches;
 
-const isCancel = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
+const isShareCancelled = (error: unknown) => error instanceof DOMException && error.name === "AbortError";
+
+const fetchShareableFile = async (token: string, fallbackFileName: string, signal: AbortSignal) => {
+  const { blob, fileName } = await fetchVideoBlob(downloadUrl(token), { maxBytes: MAX_SHARE_BYTES, signal });
+  const file = new File([blob], fileName ?? fallbackFileName, { type: blob.type });
+  if (!navigator.canShare({ files: [file] })) throw new Error("file type not shareable");
+  return file;
+};
 
 type ShareOptions = { formats: readonly VideoFormat[]; chosen: FreeFormat; active: boolean };
 
@@ -45,11 +52,9 @@ export const useWhatsAppShare = ({ formats, chosen, active }: ShareOptions) => {
     if (!wantedToken) return;
     const controller = new AbortController();
     let objectUrl: string | null = null;
-    fetchVideoBlob(downloadUrl(wantedToken), { maxBytes: MAX_SHARE_BYTES, signal: controller.signal })
-      .then(({ blob, fileName }) => {
+    fetchShareableFile(wantedToken, fallbackFileName, controller.signal)
+      .then((file) => {
         if (controller.signal.aborted) return;
-        const file = new File([blob], fileName ?? fallbackFileName, { type: blob.type });
-        if (!navigator.canShare({ files: [file] })) throw new Error("file type not shareable");
         objectUrl = URL.createObjectURL(file);
         setPreparation({ token: wantedToken, status: "ready", file, objectUrl });
       })
@@ -62,26 +67,26 @@ export const useWhatsAppShare = ({ formats, chosen, active }: ShareOptions) => {
     };
   }, [wantedToken, fallbackFileName]);
 
-  const current = preparation?.token === wantedToken ? preparation : null;
+  const activePreparation = preparation?.token === wantedToken ? preparation : null;
 
   const statusOf = (): ShareStatus => {
     if (!filesSupported) return "unsupported";
     if (!shareFormat) return "hidden";
-    if (current) return current.status;
+    if (activePreparation) return activePreparation.status;
     return wantedToken ? "preparing" : "idle";
   };
 
   const share = () => {
-    if (current?.status !== "ready") return;
+    if (activePreparation?.status !== "ready") return;
     // Called straight from the click: the share sheet needs the tap's user activation.
-    navigator.share({ files: [current.file] }).catch((error: unknown) => {
-      if (!isCancel(error)) setPreparation({ token: current.token, status: "failed" });
+    navigator.share({ files: [activePreparation.file] }).catch((error: unknown) => {
+      if (!isShareCancelled(error)) setPreparation({ token: activePreparation.token, status: "failed" });
     });
   };
 
   const savedVideo =
-    current?.status === "ready" && current.token === chosen.token
-      ? { href: current.objectUrl, fileName: current.file.name }
+    activePreparation?.status === "ready" && activePreparation.token === chosen.token
+      ? { href: activePreparation.objectUrl, fileName: activePreparation.file.name }
       : null;
 
   return {
