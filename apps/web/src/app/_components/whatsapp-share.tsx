@@ -43,8 +43,11 @@ export const useWhatsAppShare = ({ formats, chosen, active }: ShareOptions) => {
   const filesSupported = useSyncExternalStore(subscribeNever, canShareFromPhone, () => false);
   const shareFormat = filesSupported ? pickShareableFormat(formats, chosen) : null;
   const [tappedToken, setTappedToken] = useState<string | null>(null);
+  const [prefetchCancelled, setPrefetchCancelled] = useState(false);
   const [preparation, setPreparation] = useState<Preparation | null>(null);
-  const requested = shareFormat !== null && (shareFormat.token === chosen.token || shareFormat.token === tappedToken);
+  const requested =
+    shareFormat !== null &&
+    ((!prefetchCancelled && shareFormat.token === chosen.token) || shareFormat.token === tappedToken);
   const wantedToken = active && requested ? shareFormat.token : null;
   const fallbackFileName = shareFormat ? `nowvi-${shareFormat.quality}.${shareFormat.ext}` : "";
 
@@ -64,6 +67,7 @@ export const useWhatsAppShare = ({ formats, chosen, active }: ShareOptions) => {
     return () => {
       controller.abort();
       if (objectUrl) URL.revokeObjectURL(objectUrl);
+      setPreparation(null);
     };
   }, [wantedToken, fallbackFileName]);
 
@@ -94,6 +98,10 @@ export const useWhatsAppShare = ({ formats, chosen, active }: ShareOptions) => {
     quality: shareFormat?.quality ?? "",
     savedVideo,
     prepare: () => setTappedToken(shareFormat?.token ?? null),
+    cancel: () => {
+      setPrefetchCancelled(true);
+      setTappedToken(null);
+    },
     share,
   };
 };

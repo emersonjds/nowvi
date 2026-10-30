@@ -167,7 +167,7 @@ export const id = {
     },
     privacy: {
       title: "Kebijakan Privasi",
-      text: "Nowvi tidak meminta pendaftaran, login, atau data pribadi; satu-satunya data yang diproses adalah link video. Tidak ada video yang disimpan. Kami hanya menyimpan metrik agregat (platform dan kualitas yang diunduh), tanpa dikaitkan dengan siapa pun, sesuai LGPD Brasil (Undang-Undang 13.709/2018). Browser hanya menyimpan pilihan cookie kamu, dan iklan hanya dimuat jika kamu setuju; ubah kapan saja lewat “Preferensi cookie” di footer. Untuk mencegah penyalahgunaan, server memakai IP kamu selama beberapa menit, hanya di memori, tanpa disimpan. Pertanyaan soal data: contato@nowvi.com.br.",
+      text: "Nowvi tidak meminta pendaftaran, login, atau data pribadi; satu-satunya data yang diproses adalah link video. Tidak ada video yang disimpan. Kami hanya menyimpan metrik agregat (platform dan kualitas yang diunduh), tanpa dikaitkan dengan siapa pun, sesuai LGPD Brasil (Undang-Undang 13.709/2018). Browser hanya menyimpan pilihan cookie kamu dan, jika kamu mengganti bahasa, preferensi bahasa itu, selama 1 tahun. Iklan hanya dimuat jika kamu setuju; ubah pilihanmu kapan saja lewat “Preferensi cookie” di footer. Untuk mencegah penyalahgunaan, server memakai IP kamu selama beberapa menit, hanya di memori, tanpa disimpan. Pertanyaan soal data: contato@nowvi.com.br.",
     },
     dmca: {
       title: "Penghapusan Konten (DMCA)",

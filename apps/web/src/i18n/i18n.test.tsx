@@ -1,5 +1,9 @@
+import { NextRequest } from "next/server";
+
 import { renderHook } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
+import { proxy } from "@/proxy";
 
 import { fill, useDictionary } from "./client";
 import { isLocale, LOCALES } from "./config";
@@ -90,5 +94,29 @@ describe("fill", () => {
 describe("useDictionary", () => {
   it("fails loudly outside a DictionaryProvider", () => {
     expect(() => renderHook(() => useDictionary())).toThrow("useDictionary needs a DictionaryProvider");
+  });
+});
+
+describe("proxy", () => {
+  const detect = (userAgent: string) =>
+    proxy(new NextRequest("https://nowvi.test/", { headers: { "user-agent": userAgent, "accept-language": "es" } }));
+
+  it.each([
+    "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+    "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)",
+    "Mozilla/5.0 (compatible; YandexBot/3.0)",
+  ])("sends the crawler %s to the English home for good", (userAgent) => {
+    const response = detect(userAgent);
+
+    expect(response.status).toBe(308);
+    expect(response.headers.get("location")).toBe("https://nowvi.test/en");
+    expect(response.headers.get("vary")).toBe("Accept-Language, Cookie, User-Agent");
+  });
+
+  it("treats a CUBOT phone as a person", () => {
+    const response = detect("Mozilla/5.0 (Linux; Android 10; CUBOT X30) AppleWebKit/537.36 Mobile Safari/537.36");
+
+    expect(response.status).toBe(307);
+    expect(response.headers.get("location")).toBe("https://nowvi.test/es");
   });
 });

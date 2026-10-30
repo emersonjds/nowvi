@@ -72,6 +72,7 @@ export const WaitingPanel = ({
   }, [unlocked]);
 
   const handleDownload = (event: MouseEvent<HTMLAnchorElement>) => {
+    if (whatsApp.status === "preparing") whatsApp.cancel();
     if (savedVideo || Date.now() <= expiresAt) {
       setDownloading(true);
       return;

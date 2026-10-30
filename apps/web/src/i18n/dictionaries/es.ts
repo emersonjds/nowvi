@@ -162,7 +162,7 @@ export const es = {
     },
     privacy: {
       title: "Política de privacidad",
-      text: "Nowvi no pide registro, inicio de sesión ni datos personales; el único dato que se procesa es el enlace del video. No se almacena ningún video. Solo guardamos métricas agregadas (red y calidad descargada), sin vincularlas a ninguna persona, conforme a la LGPD de Brasil (Ley 13.709/2018). Tu navegador guarda solo tu elección de cookies, y los anuncios solo cargan si aceptas; puedes cambiarla en “Preferencias de cookies”, en el pie de página. Para frenar abusos, el servidor usa tu IP unos minutos, solo en memoria, sin guardarla. Dudas sobre tus datos: contato@nowvi.com.br.",
+      text: "Nowvi no pide registro, inicio de sesión ni datos personales; el único dato que se procesa es el enlace del video. No se almacena ningún video. Solo guardamos métricas agregadas (red y calidad descargada), sin vincularlas a ninguna persona, conforme a la LGPD de Brasil (Ley 13.709/2018). Tu navegador guarda solo tu elección de cookies y, si cambias de idioma, esa preferencia, durante 1 año. Los anuncios solo cargan si aceptas; puedes cambiar tu elección en “Preferencias de cookies”, en el pie de página. Para frenar abusos, el servidor usa tu IP unos minutos, solo en memoria, sin guardarla. Dudas sobre tus datos: contato@nowvi.com.br.",
     },
     dmca: {
       title: "Retiro de contenido (DMCA)",
