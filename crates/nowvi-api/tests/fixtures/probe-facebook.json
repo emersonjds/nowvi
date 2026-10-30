@@ -1,0 +1,15 @@
+{
+  "webpage_url": "https://www.facebook.com/reel/1195289147628387",
+  "title": "Reel",
+  "uploader": null,
+  "channel": null,
+  "creator": null,
+  "thumbnail": null,
+  "duration": 12.5,
+  "formats": [
+    {"format_id":"1418122939762069a","ext":"m4a","vcodec":"none","acodec":"mp4a.40.5","width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
+    {"format_id":"sd","ext":"mp4","vcodec":null,"acodec":null,"width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
+    {"format_id":"hd","ext":"mp4","vcodec":null,"acodec":null,"width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
+    {"format_id":"1417507216490308v","ext":"mp4","vcodec":"vp09.00.21.08.01.01.01.01.00","acodec":"none","width":360,"height":636,"tbr":null,"filesize":null,"filesize_approx":null}
+  ]
+}
