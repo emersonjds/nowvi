@@ -1,18 +1,45 @@
-/** @type {import('next').NextConfig} */
-const nextConfig = {
-  reactCompiler: true,
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production",
-  },
-  async redirects() {
-    return [
-      {
-        source: "/dashboard",
-        destination: "/dashboard/default",
-        permanent: false,
-      },
-    ];
-  },
+import { PHASE_PRODUCTION_BUILD } from "next/constants.js";
+
+const isDev = process.env.NODE_ENV === "development";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "";
+
+const contentSecurityPolicy = [
+  "default-src 'self'",
+  // Next.js inlines its bootstrap scripts; the Adsterra banner loads invoke.js inside a srcdoc iframe, which inherits this policy.
+  `script-src 'self' 'unsafe-inline' https://www.highperformanceformat.com${isDev ? " 'unsafe-eval'" : ""}`,
+  "style-src 'self' 'unsafe-inline'",
+  `connect-src 'self' ${apiUrl}${isDev ? " ws:" : ""}`,
+  "img-src 'self' https: data:",
+  "font-src 'self'",
+  "frame-src https:",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'none'",
+].join("; ");
+
+const securityHeaders = [
+  { key: "Content-Security-Policy", value: contentSecurityPolicy },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()" },
+];
+
+/** @type {(phase: string) => import('next').NextConfig} */
+const nextConfig = (phase) => {
+  if (phase === PHASE_PRODUCTION_BUILD) {
+    const missing = ["NEXT_PUBLIC_API_URL", "NEXT_PUBLIC_SITE_URL"].filter((name) => !process.env[name]);
+    if (missing.length > 0) throw new Error(`Missing env for the production build: ${missing.join(", ")}`);
+  }
+
+  return {
+    output: "standalone",
+    reactCompiler: true,
+    compiler: {
+      removeConsole: process.env.NODE_ENV === "production",
+    },
+    headers: async () => [{ source: "/:path*", headers: securityHeaders }],
+  };
 };
 
 export default nextConfig;
