@@ -168,7 +168,7 @@ export const en = {
     },
     privacy: {
       title: "Privacy Policy",
-      text: "Nowvi asks for no sign-up, login or personal data; the only data processed is the video link. No video is stored. We keep only aggregate metrics (platform and quality downloaded), never tied to a person, in line with Brazil's LGPD (Law 13,709/2018). Cookies are used to measure traffic and show ads, as the cookie notice explains. Questions about your data: contato@nowvi.com.br.",
+      text: "Nowvi asks for no sign-up, login or personal data; the only data processed is the video link. No video is stored. We keep only aggregate metrics (platform and quality downloaded), never tied to a person, in line with Brazil's LGPD (Law 13,709/2018). Your browser stores only your cookie choice, and ads load only if you accept; change it anytime under “Cookie preferences” in the footer. To stop abuse, the server uses your IP for a few minutes, in memory only, never stored. Questions about your data: contato@nowvi.com.br.",
     },
     dmca: {
       title: "Content Removal (DMCA)",
@@ -179,6 +179,7 @@ export const en = {
     tagline: "The fastest way to save TikTok, X and Facebook videos to your phone.",
     legalNav: "Legal links",
     contact: "Contact",
+    cookiePreferences: "Cookie preferences",
     disclaimer: "We are not affiliated with the social networks mentioned.",
   },
   notFound: {

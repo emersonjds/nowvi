@@ -32,6 +32,16 @@ const saveConsent = (value: Consent) => {
   window.dispatchEvent(new Event(CONSENT_EVENT));
 };
 
+const clearConsent = () => {
+  memoryConsent = null;
+  try {
+    window.localStorage.removeItem(STORAGE_KEY);
+  } catch {
+    // Storage blocked: only the in-memory choice existed.
+  }
+  window.dispatchEvent(new Event(CONSENT_EVENT));
+};
+
 const subscribe = (onChange: () => void) => {
   window.addEventListener("storage", onChange);
   window.addEventListener(CONSENT_EVENT, onChange);
@@ -43,6 +53,13 @@ const subscribe = (onChange: () => void) => {
 
 /** `undefined` on the server and during hydration, `null` while the visitor has not chosen. */
 export const useConsent = () => useSyncExternalStore(subscribe, readConsent, () => undefined);
+
+/** Withdrawing consent (LGPD art. 8 §5): the banner comes back and third-party ads stop loading. */
+export const CookiePreferencesButton = ({ label }: { label: string }) => (
+  <button type="button" onClick={clearConsent} className="hover:text-primary flex min-h-11 items-center px-2 text-sm">
+    {label}
+  </button>
+);
 
 export const CookieBanner = () => {
   const consent = useConsent();

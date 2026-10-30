@@ -168,7 +168,7 @@ export const ptBr = {
     },
     privacy: {
       title: "Política de Privacidade",
-      text: "O Nowvi não pede cadastro, login nem dados pessoais; o único dado tratado é o link do vídeo. Nenhum vídeo fica armazenado. Guardamos só métricas agregadas (rede e qualidade baixada), sem ligar a uma pessoa, conforme a LGPD (Lei 13.709/2018). Cookies servem para medir tráfego e exibir anúncios, como diz o aviso de cookies. Dúvidas sobre dados: contato@nowvi.com.br.",
+      text: "O Nowvi não pede cadastro, login nem dados pessoais; o único dado tratado é o link do vídeo. Nenhum vídeo fica armazenado. Guardamos só métricas agregadas (rede e qualidade baixada), sem ligar a uma pessoa, conforme a LGPD (Lei 13.709/2018). O navegador guarda só a sua escolha de cookies, e os anúncios só carregam se você aceitar; dá para mudar em “Preferências de cookies”, no rodapé. Para conter abuso, o servidor usa o seu IP por alguns minutos, só em memória, sem gravar. Dúvidas sobre dados: contato@nowvi.com.br.",
     },
     dmca: {
       title: "Remoção de Conteúdo (DMCA)",
@@ -179,6 +179,7 @@ export const ptBr = {
     tagline: "O jeito mais rápido de salvar vídeos do TikTok, X e Facebook no seu celular.",
     legalNav: "Links legais",
     contact: "Contato",
+    cookiePreferences: "Preferências de cookies",
     disclaimer: "Não somos afiliados às redes sociais citadas.",
   },
   notFound: {

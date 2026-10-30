@@ -2,6 +2,7 @@ import type { Locale } from "@/i18n/config";
 import { getDictionary, pagePath } from "@/i18n/dictionary";
 
 import { BrandLogo } from "./brand-logo";
+import { CookiePreferencesButton } from "./cookie-banner";
 import { LEGAL_SECTIONS } from "./legal-sections";
 
 export const SiteFooter = ({ locale }: { locale: Locale }) => {
@@ -28,6 +29,9 @@ export const SiteFooter = ({ locale }: { locale: Locale }) => {
                 </a>
               </li>
             ))}
+            <li>
+              <CookiePreferencesButton label={dictionary.footer.cookiePreferences} />
+            </li>
           </ul>
         </nav>
         <p className="text-muted-foreground text-xs">
