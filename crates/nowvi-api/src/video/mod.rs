@@ -210,17 +210,20 @@ pub async fn download(
 ) -> Response {
     match stream(&state, client, query).await {
         Ok(response) => response,
-        Err(error) => {
-            let origin = state
-                .config
-                .web_origins
-                .first()
-                .and_then(|origin| origin.to_str().ok())
-                .unwrap_or_default()
-                .trim_end_matches('/');
-            Redirect::to(&format!("{origin}/?erro={}", error.code())).into_response()
-        }
+        Err(error) => back_to_page(&state, &error),
     }
+}
+
+/// `303 <first WEB_ORIGIN>/?erro=<code>`: the page shows the fixed text for the code.
+pub fn back_to_page(state: &AppState, error: &AppError) -> Response {
+    let origin = state
+        .config
+        .web_origins
+        .first()
+        .and_then(|origin| origin.to_str().ok())
+        .unwrap_or_default()
+        .trim_end_matches('/');
+    Redirect::to(&format!("{origin}/?erro={}", error.code())).into_response()
 }
 
 async fn stream(

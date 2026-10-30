@@ -148,6 +148,9 @@ pub async fn limit(State(state): State<AppState>, mut request: Request, next: Ne
         .map(|ConnectInfo(address)| address.ip());
     let client = client_ip(request.headers(), peer);
     if let Err(error) = state.limits.check(client.0, Instant::now()) {
+        if request.uri().path() == "/api/download" {
+            return crate::video::back_to_page(&state, &error);
+        }
         return error.into_response();
     }
     request.extensions_mut().insert(client);
