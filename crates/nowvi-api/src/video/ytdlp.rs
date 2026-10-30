@@ -78,6 +78,15 @@ pub struct Pick {
     pub height: u32,
     pub filesize_bytes: Option<u64>,
     pub tier: Tier,
+    pub h264: bool,
+}
+
+/// H.264, or an mp4 with no codec listed (X's progressive files are H.264): what WhatsApp plays.
+fn is_h264(format: &Format) -> bool {
+    match format.vcodec.as_deref() {
+        Some(codec) => codec.starts_with("avc") || codec.starts_with("h264"),
+        None => format.ext.as_deref() == Some("mp4"),
+    }
 }
 
 /// Progressive formats only, with a missing `acodec` counted in (part of X leaves it null): the
@@ -85,12 +94,8 @@ pub struct Pick {
 /// Up to 4 free (<= 720), largest first, after the single largest full HD (>= 1080).
 pub fn pick_formats(formats: &[Format]) -> Vec<Pick> {
     let rank = |format: &Format| {
-        let h264 = format
-            .vcodec
-            .as_deref()
-            .is_some_and(|codec| codec.starts_with("avc") || codec.starts_with("h264"));
         (
-            h264,
+            is_h264(format),
             format.ext.as_deref() == Some("mp4"),
             format.tbr.unwrap_or(0.0),
         )
@@ -120,6 +125,7 @@ pub fn pick_formats(formats: &[Format]) -> Vec<Pick> {
             .or(format.filesize_approx)
             .map(|bytes| bytes as u64),
         tier,
+        h264: is_h264(format),
     };
     let full_hd = best
         .range(1080..)
