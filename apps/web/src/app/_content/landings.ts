@@ -1,29 +1,18 @@
 import type { Metadata } from "next";
 
 import { APP_CONFIG } from "@/config/app-config";
-import type { Dictionary } from "@/i18n/dictionaries/pt-br";
+import type { Locale } from "@/i18n/config";
+import { type PageKey, pageContent, pagePath } from "@/i18n/dictionary";
 
 export type Step = { title: string; text?: string };
 export type Question = { question: string; answer: string };
 
-export type LandingId = keyof Dictionary["landings"];
-export type PageKey = "home" | LandingId;
-
-// Keep in sync with `landings` in the dictionaries; an id back from `pausedLandings` goes here too.
-export const LANDING_IDS = ["tiktok", "x", "facebook"] as const satisfies readonly LandingId[];
-
-export const pageContent = (dictionary: Dictionary, page: PageKey) =>
-  page === "home" ? dictionary.home : dictionary.landings[page];
-
-export const pagePath = (dictionary: Dictionary, page: PageKey) =>
-  page === "home" ? "/" : `/${dictionary.landings[page].slug}`;
-
 // The root opengraph-image is dropped once a nested page sets its own openGraph.
 const OG_IMAGE = "/opengraph-image";
 
-export const pageMetadata = (dictionary: Dictionary, page: PageKey): Metadata => {
-  const { title, description } = pageContent(dictionary, page);
-  const path = pagePath(dictionary, page);
+export const pageMetadata = (locale: Locale, page: PageKey): Metadata => {
+  const { title, description } = pageContent(locale, page);
+  const path = pagePath(locale, page);
   return {
     title,
     description,

@@ -1,12 +1,13 @@
 import { ZapIcon } from "lucide-react";
 
-import type { Dictionary } from "@/i18n/dictionaries/pt-br";
+import type { Locale } from "@/i18n/config";
+import { getDictionary, pagePath } from "@/i18n/dictionary";
 
 import { LEGAL_SECTIONS } from "./legal-sections";
 
-type SiteFooterProps = { dictionary: Dictionary; homePath: string };
-
-export const SiteFooter = ({ dictionary, homePath }: SiteFooterProps) => {
+export const SiteFooter = ({ locale }: { locale: Locale }) => {
+  const dictionary = getDictionary(locale);
+  const homePath = pagePath(locale, "home");
   const links = [
     ...LEGAL_SECTIONS.map(({ key, id }) => ({ label: dictionary.legal[key].title, href: `${homePath}#${id}` })),
     { label: dictionary.footer.contact, href: "mailto:contato@nowvi.com.br" },

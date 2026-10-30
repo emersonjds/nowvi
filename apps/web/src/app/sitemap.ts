@@ -1,12 +1,11 @@
 import type { MetadataRoute } from "next";
 
 import { APP_CONFIG } from "@/config/app-config";
-import { ptBr } from "@/i18n/dictionaries/pt-br";
-
-import { LANDING_IDS, pagePath } from "./_content/landings";
+import { LOCALES } from "@/i18n/config";
+import { PAGE_KEYS, pagePath } from "@/i18n/dictionary";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return (["home", ...LANDING_IDS] as const).map((page) => ({
-    url: new URL(pagePath(ptBr, page), APP_CONFIG.url).href,
-  }));
+  return LOCALES.flatMap((locale) =>
+    PAGE_KEYS.map((page) => ({ url: new URL(pagePath(locale, page), APP_CONFIG.url).href })),
+  );
 }
