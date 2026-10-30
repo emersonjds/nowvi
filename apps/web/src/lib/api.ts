@@ -7,24 +7,53 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export const platformSchema = z.enum(["instagram", "tiktok", "x", "facebook"]);
 
-export const videoInfoSchema = z.object({
-  platform: platformSchema,
-  title: z.string(),
-  author: z.string().nullable(),
-  thumbnail: z
-    .url({ protocol: /^https$/ })
-    .nullable()
-    .catch(null),
-  duration_seconds: z.number().nullable(),
-  free: z.object({
-    height: z.number(),
-    filesize_bytes: z.number().nullable(),
-    token: z.string(),
-    wait_seconds: z.number(),
-    expires_in_seconds: z.number(),
-  }),
-  full_hd_available: z.boolean(),
-});
+const formatBase = { quality: z.string(), height: z.number(), ext: z.string(), filesize_bytes: z.number().nullable() };
+
+const formatSchema = z.discriminatedUnion("tier", [
+  z.object({ ...formatBase, tier: z.literal("free"), token: z.string() }),
+  z.object({ ...formatBase, tier: z.literal("full_hd"), token: z.null() }),
+]);
+
+export type VideoFormat = z.infer<typeof formatSchema>;
+export type FreeFormat = Extract<VideoFormat, { tier: "free" }>;
+
+export const videoInfoSchema = z
+  .object({
+    platform: platformSchema,
+    title: z.string(),
+    author: z.string().nullable(),
+    thumbnail: z
+      .url({ protocol: /^https$/ })
+      .nullable()
+      .catch(null),
+    duration_seconds: z.number().nullable(),
+    free: z.object({
+      height: z.number(),
+      filesize_bytes: z.number().nullable(),
+      token: z.string(),
+      wait_seconds: z.number(),
+      expires_in_seconds: z.number(),
+    }),
+    full_hd_available: z.boolean(),
+    formats: z.array(formatSchema).catch([]),
+  })
+  .transform((video) => {
+    if (video.formats.some((format) => format.tier === "free")) return video;
+    // An API from before NOWVI-22 sends no `formats` mid deploy: rebuild the list from `free`.
+    const { height, filesize_bytes, token } = video.free;
+    const formats: VideoFormat[] = [{ quality: `${height}p`, height, ext: "mp4", filesize_bytes, tier: "free", token }];
+    if (video.full_hd_available) {
+      formats.unshift({
+        quality: "1080p",
+        height: 1080,
+        ext: "mp4",
+        filesize_bytes: null,
+        tier: "full_hd",
+        token: null,
+      });
+    }
+    return { ...video, formats };
+  });
 
 export type Platform = z.infer<typeof platformSchema>;
 export type VideoInfo = z.infer<typeof videoInfoSchema>;

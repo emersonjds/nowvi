@@ -7,6 +7,7 @@ import {
   CircleCheckIcon,
   DownloadIcon,
   FilmIcon,
+  Layers2Icon,
   LockIcon,
   RotateCcwIcon,
   ZapIcon,
@@ -15,9 +16,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { downloadUrl, type VideoInfo } from "@/lib/api";
+import { downloadUrl, type FreeFormat } from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
+import { formatMegabytes, qualityLabel } from "./quality-options";
 
 const TITLE = {
   waiting: "Liberando seu download…",
@@ -33,27 +35,26 @@ const phaseOf = (downloading: boolean, done: boolean): keyof typeof TITLE => {
   return "waiting";
 };
 
-const formatMegabytes = (bytes: number) =>
-  `~${(bytes / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`;
-
 type WaitingPanelProps = {
-  video: VideoInfo;
+  format: FreeFormat;
   startedAt: number;
   readyAt: number;
   expiresAt: number;
   onFullHd?: () => void;
   onExpired: () => void;
   onNewVideo: () => void;
+  onOtherQuality: () => void;
 };
 
 export const WaitingPanel = ({
-  video,
+  format,
   startedAt,
   readyAt,
   expiresAt,
   onFullHd,
   onExpired,
   onNewVideo,
+  onOtherQuality,
 }: WaitingPanelProps) => {
   const [now, setNow] = useState(startedAt);
   const [downloading, setDownloading] = useState(false);
@@ -117,16 +118,20 @@ export const WaitingPanel = ({
               Baixar novo vídeo
             </Button>
             <Button asChild variant="secondary" className="h-12 text-base font-bold">
-              <a href={downloadUrl(video.free.token)} download onClick={handleDownload}>
+              <a href={downloadUrl(format.token)} download onClick={handleDownload}>
                 <DownloadIcon className="size-5" aria-hidden />
                 Baixar de novo
               </a>
+            </Button>
+            <Button variant="ghost" className="h-12 text-base font-bold" onClick={onOtherQuality}>
+              <Layers2Icon className="size-5" aria-hidden />
+              Baixar em outra qualidade
             </Button>
           </>
         )}
         {phase === "ready" && (
           <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-base font-bold">
-            <a href={downloadUrl(video.free.token)} download onClick={handleDownload}>
+            <a href={downloadUrl(format.token)} download onClick={handleDownload}>
               <DownloadIcon className="size-5" aria-hidden />
               Baixar agora
             </a>
@@ -165,9 +170,11 @@ export const WaitingPanel = ({
 
       <p className="bg-muted flex items-center gap-3 rounded-xl px-4 py-3 text-sm">
         <FilmIcon className="text-primary size-5" aria-hidden />
-        <span className="flex-1">Vídeo {video.free.height}p em MP4</span>
-        {video.free.filesize_bytes ? (
-          <span className="text-muted-foreground">{formatMegabytes(video.free.filesize_bytes)}</span>
+        <span className="flex-1">
+          Vídeo {qualityLabel(format)} em {format.ext.toUpperCase()}
+        </span>
+        {format.filesize_bytes ? (
+          <span className="text-muted-foreground">{formatMegabytes(format.filesize_bytes)}</span>
         ) : null}
       </p>
     </section>
