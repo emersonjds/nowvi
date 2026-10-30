@@ -14,13 +14,14 @@ const STDOUT_CAP: u64 = 2 * 1024 * 1024;
 const STDERR_CAP: u64 = 8 * 1024;
 const STDERR_LINES: usize = 200;
 
-/// Both calls: only the 4 extractors, and nothing from the host's config, plugins or cache.
+/// Both calls: only the 4 networks (share links `vm.tiktok`, `facebook:reel` and `instagram:story` included;
+/// never `FacebookRedirectURL`, which follows `l.php?u=` anywhere), and nothing from the host's config, plugins or cache.
 const COMMON_ARGS: [&str; 7] = [
     "--ignore-config",
     "--no-plugin-dirs",
     "--no-cache-dir",
     "--use-extractors",
-    "instagram,tiktok,twitter,facebook",
+    "instagram,instagram:story,tiktok,vm.tiktok,twitter,facebook,facebook:reel",
     "--no-playlist",
     "--no-warnings",
 ];
