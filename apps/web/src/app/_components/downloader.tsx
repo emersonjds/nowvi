@@ -5,7 +5,6 @@ import { type FormEvent, type ReactNode, useEffect, useReducer, useRef, useState
 import {
   ArrowLeftIcon,
   AtSignIcon,
-  CameraIcon,
   CircleAlertIcon,
   ClipboardPasteIcon,
   DownloadIcon,
@@ -19,7 +18,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ERROR_MESSAGES, type ErrorCode, errorCodeSchema, fetchVideoInfo, type VideoInfo } from "@/lib/api";
+import {
+  ERROR_MESSAGES,
+  type ErrorCode,
+  errorCodeSchema,
+  type FreeFormat,
+  fetchVideoInfo,
+  type VideoInfo,
+} from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
 import { PixSheet } from "./pix-sheet";
@@ -27,7 +33,7 @@ import { QualityOptions } from "./quality-options";
 import { VideoCard } from "./video-card";
 import { WaitingPanel } from "./waiting-panel";
 
-type Ticket = { video: VideoInfo; readyAt: number; expiresAt: number };
+type Ticket = { video: VideoInfo; format: FreeFormat; readyAt: number; expiresAt: number };
 
 type State =
   | { status: "idle" }
@@ -40,7 +46,9 @@ type Action =
   | { type: "submit" }
   | ({ type: "loaded" } & Ticket)
   | { type: "failed"; code: ErrorCode }
+  | { type: "choose"; format: FreeFormat }
   | { type: "wait"; startedAt: number }
+  | { type: "back" }
   | { type: "reset" };
 
 const reducer = (state: State, action: Action): State => {
@@ -48,18 +56,27 @@ const reducer = (state: State, action: Action): State => {
     case "submit":
       return { status: "loading" };
     case "loaded":
-      return { status: "ready", video: action.video, readyAt: action.readyAt, expiresAt: action.expiresAt };
+      return {
+        status: "ready",
+        video: action.video,
+        format: action.format,
+        readyAt: action.readyAt,
+        expiresAt: action.expiresAt,
+      };
     case "failed":
       return { status: "error", code: action.code };
+    case "choose":
+      return state.status === "ready" ? { ...state, format: action.format } : state;
     case "wait":
       return state.status === "ready" ? { ...state, status: "waiting", startedAt: action.startedAt } : state;
+    case "back":
+      return state.status === "waiting" ? { ...state, status: "ready" } : state;
     case "reset":
       return { status: "idle" };
   }
 };
 
 const PLATFORM_CHIPS = [
-  { label: "Instagram", Icon: CameraIcon },
   { label: "TikTok", Icon: Music2Icon },
   { label: "X", Icon: AtSignIcon },
   { label: "Facebook", Icon: GlobeIcon },
@@ -116,10 +133,16 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
       dispatch({ type: "failed", code: result.code });
       return;
     }
+    const format = result.data.formats.find((item) => item.tier === "free");
+    if (!format) {
+      dispatch({ type: "failed", code: "not_found" });
+      return;
+    }
     const receivedAt = Date.now();
     dispatch({
       type: "loaded",
       video: result.data,
+      format,
       readyAt: receivedAt + result.data.free.wait_seconds * 1000 + 1000,
       expiresAt: receivedAt + result.data.free.expires_in_seconds * 1000,
     });
@@ -163,25 +186,30 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
 
           {state.status === "waiting" ? (
             <WaitingPanel
-              video={video}
+              format={state.format}
               startedAt={state.startedAt}
               readyAt={state.readyAt}
               expiresAt={state.expiresAt}
               onFullHd={openPix}
               onExpired={expire}
               onNewVideo={reset}
+              onOtherQuality={() => dispatch({ type: "back" })}
             />
-          ) : (
+          ) : null}
+
+          {state.status === "ready" ? (
             <>
               <VideoCard video={video} />
               <QualityOptions
-                fullHdAvailable={video.full_hd_available}
+                formats={video.formats}
+                selected={state.format}
+                onSelect={(format) => dispatch({ type: "choose", format })}
                 onFree={startFree}
                 onFullHd={() => setPixOpen(true)}
               />
               <AdSlot onUpgrade={openPix} />
             </>
-          )}
+          ) : null}
 
           {video.full_hd_available ? (
             <PixSheet

@@ -7,24 +7,53 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export const platformSchema = z.enum(["instagram", "tiktok", "x", "facebook"]);
 
-export const videoInfoSchema = z.object({
-  platform: platformSchema,
-  title: z.string(),
-  author: z.string().nullable(),
-  thumbnail: z
-    .url({ protocol: /^https$/ })
-    .nullable()
-    .catch(null),
-  duration_seconds: z.number().nullable(),
-  free: z.object({
-    height: z.number(),
-    filesize_bytes: z.number().nullable(),
-    token: z.string(),
-    wait_seconds: z.number(),
-    expires_in_seconds: z.number(),
-  }),
-  full_hd_available: z.boolean(),
-});
+const formatBase = { quality: z.string(), height: z.number(), ext: z.string(), filesize_bytes: z.number().nullable() };
+
+const formatSchema = z.discriminatedUnion("tier", [
+  z.object({ ...formatBase, tier: z.literal("free"), token: z.string() }),
+  z.object({ ...formatBase, tier: z.literal("full_hd"), token: z.null() }),
+]);
+
+export type VideoFormat = z.infer<typeof formatSchema>;
+export type FreeFormat = Extract<VideoFormat, { tier: "free" }>;
+
+export const videoInfoSchema = z
+  .object({
+    platform: platformSchema,
+    title: z.string(),
+    author: z.string().nullable(),
+    thumbnail: z
+      .url({ protocol: /^https$/ })
+      .nullable()
+      .catch(null),
+    duration_seconds: z.number().nullable(),
+    free: z.object({
+      height: z.number(),
+      filesize_bytes: z.number().nullable(),
+      token: z.string(),
+      wait_seconds: z.number(),
+      expires_in_seconds: z.number(),
+    }),
+    full_hd_available: z.boolean(),
+    formats: z.array(formatSchema).catch([]),
+  })
+  .transform((video) => {
+    if (video.formats.some((format) => format.tier === "free")) return video;
+    // An API from before NOWVI-22 sends no `formats` mid deploy: rebuild the list from `free`.
+    const { height, filesize_bytes, token } = video.free;
+    const formats: VideoFormat[] = [{ quality: `${height}p`, height, ext: "mp4", filesize_bytes, tier: "free", token }];
+    if (video.full_hd_available) {
+      formats.unshift({
+        quality: "1080p",
+        height: 1080,
+        ext: "mp4",
+        filesize_bytes: null,
+        tier: "full_hd",
+        token: null,
+      });
+    }
+    return { ...video, formats };
+  });
 
 export type Platform = z.infer<typeof platformSchema>;
 export type VideoInfo = z.infer<typeof videoInfoSchema>;
@@ -32,6 +61,7 @@ export type VideoInfo = z.infer<typeof videoInfoSchema>;
 export const errorCodeSchema = z.enum([
   "invalid_url",
   "unsupported_platform",
+  "platform_unavailable",
   "too_long",
   "not_found",
   "rate_limited",
@@ -49,7 +79,9 @@ const errorBodySchema = z.object({ error: errorCodeSchema });
 
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   invalid_url: "Esse link não parece válido. Copie o link completo do vídeo, começando com https://.",
-  unsupported_platform: "Por enquanto o Nowvi baixa vídeos do Instagram, TikTok, X e Facebook.",
+  unsupported_platform: "Por enquanto o Nowvi baixa vídeos do TikTok, X e Facebook.",
+  platform_unavailable:
+    "O Instagram está temporariamente indisponível. Por enquanto, o Nowvi baixa vídeos do TikTok, X e Facebook.",
   too_long: "Esse vídeo passa de 15 minutos. Por enquanto, o Nowvi baixa vídeos de até 15 minutos.",
   not_found: "Não achamos esse vídeo. Ele pode ser privado, ter sido apagado ou o post não tem vídeo.",
   rate_limited: "Muitas buscas em pouco tempo. Espere alguns segundos e tente de novo.",
