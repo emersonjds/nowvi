@@ -7,12 +7,12 @@ import { languageAlternates, type PageKey, pageContent, pagePath } from "@/i18n/
 export type Step = { title: string; text?: string };
 export type Question = { question: string; answer: string };
 
-// The root opengraph-image is dropped once a nested page sets its own openGraph.
-const OG_IMAGE = "/opengraph-image";
+export const OG_IMAGE_SIZE = { width: 1200, height: 630 };
 
 export const pageMetadata = (locale: Locale, page: PageKey): Metadata => {
-  const { title, description } = pageContent(locale, page);
+  const { title, description, heading } = pageContent(locale, page);
   const path = pagePath(locale, page);
+  const images = [{ url: `${path}/opengraph-image`, ...OG_IMAGE_SIZE, alt: heading, type: "image/png" }];
   return {
     title,
     description,
@@ -24,8 +24,8 @@ export const pageMetadata = (locale: Locale, page: PageKey): Metadata => {
       url: path,
       title,
       description,
-      images: OG_IMAGE,
+      images,
     },
-    twitter: { card: "summary_large_image", title, description, images: OG_IMAGE },
+    twitter: { card: "summary_large_image", title, description, images },
   };
 };

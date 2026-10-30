@@ -23,6 +23,9 @@ export const LANDING_IDS = ["tiktok", "x", "facebook"] as const satisfies readon
 
 export const PAGE_KEYS: readonly PageKey[] = ["home", ...LANDING_IDS];
 
+export const landingBySlug = (locale: Locale, slug: string) =>
+  LANDING_IDS.find((id) => DICTIONARIES[locale].landings[id].slug === slug) ?? notFound();
+
 export const pageContent = (locale: Locale, page: PageKey) =>
   page === "home" ? DICTIONARIES[locale].home : DICTIONARIES[locale].landings[page];
 

@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import { fill, useDictionary } from "./client";
 import { isLocale, LOCALES } from "./config";
-import { getDictionary, languageAlternates, pageContent, pagePath, resolveLocale } from "./dictionary";
+import { getDictionary, landingBySlug, languageAlternates, pageContent, pagePath, resolveLocale } from "./dictionary";
 
 const textLeaves = (value: unknown, path: string): [string, unknown][] =>
   typeof value === "object" && value !== null
@@ -52,6 +52,16 @@ describe("pageContent", () => {
   it("reads the home copy and the landing copy", () => {
     expect(pageContent("pt-br", "home").heading).toBe("Baixe vídeos de qualquer rede, num lugar só.");
     expect(pageContent("pt-br", "facebook").heading).toBe("Baixar vídeo do Facebook");
+  });
+});
+
+describe("landingBySlug", () => {
+  it("finds the landing behind a locale's slug", () => {
+    expect(landingBySlug("es", "descargar-video-twitter")).toBe("x");
+  });
+
+  it("answers 404 for a slug of another locale", () => {
+    expect(() => landingBySlug("en", "baixar-video-x")).toThrow("NEXT_HTTP_ERROR_FALLBACK;404");
   });
 });
 

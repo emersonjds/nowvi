@@ -11,8 +11,11 @@ import { getDictionary, resolveLocale } from "@/i18n/dictionary";
 
 import "../globals.css";
 
+// next/font emits the @font-face of every subset (latin-ext, vietnamese, cyrillic-ext) with its
+// unicode-range; `subsets` only picks which files get preloaded.
 const jakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
+  display: "swap",
   variable: "--font-jakarta",
 });
 
@@ -31,7 +34,6 @@ export const generateMetadata = async ({ params }: Pick<RootLayoutProps, "params
     authors: [{ name: APP_CONFIG.name }],
     title: home.title,
     description: home.description,
-    keywords: home.keywords,
     openGraph: { type: "website", siteName: APP_CONFIG.name, locale: LOCALE_INFO[locale].ogLocale },
     twitter: { card: "summary_large_image" },
   };

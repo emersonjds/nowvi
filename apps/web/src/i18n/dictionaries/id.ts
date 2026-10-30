@@ -8,15 +8,6 @@ export const id = {
     title: "Nowvi: Download Video TikTok, X, dan Facebook",
     description:
       "Download video TikTok, X, dan Facebook tanpa watermark dan tanpa daftar. Gratis sampai 720p, dan tidak ada yang disimpan di server.",
-    keywords: [
-      "download video tiktok tanpa watermark",
-      "download video x",
-      "download video twitter",
-      "download video facebook mp4",
-      "download reels facebook",
-      "simpan video tiktok",
-      "situs download video online",
-    ],
     heading: "Download video dari media sosial mana pun, cukup di satu tempat.",
     highlight: "cukup di satu tempat.",
     subtitle: "Simpan video TikTok, postingan X, dan video Facebook ke HP kamu dalam hitungan detik.",
@@ -196,6 +187,7 @@ export const id = {
     back: "Kembali ke beranda",
   },
   offers: { free: "Gratis sampai 720p", fullHd: "Full HD 1080p" },
+  llms: { pages: "Halaman", languages: "Bahasa", fullText: "Semua FAQ, dalam semua bahasa." },
   client: {
     features: { fullHdPix: false },
     errors: {

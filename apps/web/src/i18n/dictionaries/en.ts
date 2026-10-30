@@ -8,15 +8,6 @@ export const en = {
     title: "Nowvi: TikTok, X and Facebook Video Downloader",
     description:
       "Download TikTok, X and Facebook videos without watermark and without sign-up. Free up to 720p, and nothing is stored on our servers.",
-    keywords: [
-      "tiktok video downloader without watermark",
-      "x video downloader",
-      "twitter video downloader",
-      "facebook video downloader mp4",
-      "download facebook reels",
-      "save tiktok videos",
-      "online video downloader",
-    ],
     heading: "Download videos from any app, all in one place.",
     highlight: "all in one place.",
     subtitle: "Save TikTok videos, X posts and Facebook videos to your phone in seconds.",
@@ -188,6 +179,7 @@ export const en = {
     back: "Back to home",
   },
   offers: { free: "Free up to 720p", fullHd: "Full HD 1080p" },
+  llms: { pages: "Pages", languages: "Languages", fullText: "Every FAQ, in every language." },
   client: {
     features: { fullHdPix: false },
     errors: {

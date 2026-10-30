@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import Link from "next/link";
 
-import { APP_CONFIG } from "@/config/app-config";
+import { APP_CONFIG, absoluteUrl } from "@/config/app-config";
 import { LOCALE_INFO, type Locale } from "@/i18n/config";
 import { getDictionary, LANDING_IDS, type PageKey, pageContent, pagePath } from "@/i18n/dictionary";
 import { pageJsonLd, serializeJsonLd } from "@/lib/json-ld";
@@ -25,17 +25,31 @@ export const DownloadPage = ({ locale, page, children }: DownloadPageProps) => {
   const content = pageContent(locale, page);
   const homePath = pagePath(locale, "home");
   const { highlight } = dictionary.home;
+  const homeUrl = absoluteUrl(homePath);
+  const url = absoluteUrl(pagePath(locale, page));
   const jsonLd = pageJsonLd({
-    url: new URL(pagePath(locale, page), APP_CONFIG.url).href,
+    siteUrl: APP_CONFIG.url,
+    homeUrl,
+    url,
     name: content.heading,
     description: content.description,
     inLanguage: LOCALE_INFO[locale].htmlLang,
-    offers: [
-      { name: dictionary.offers.free, price: "0" },
-      ...(dictionary.client.features.fullHdPix ? [{ name: dictionary.offers.fullHd, price: "2.00" }] : []),
-    ],
+    offers: dictionary.client.features.fullHdPix
+      ? [
+          { name: dictionary.offers.free, price: "0", priceCurrency: "BRL" },
+          { name: dictionary.offers.fullHd, price: "2.00", priceCurrency: "BRL" },
+        ]
+      : [{ name: dictionary.offers.free, price: "0" }],
     steps: content.steps,
     faq: content.faq,
+    breadcrumbs:
+      page === "home"
+        ? []
+        : [
+            { name: APP_CONFIG.name, url: homeUrl },
+            { name: dictionary.landings[page].network, url },
+          ],
+    profiles: APP_CONFIG.profiles,
   });
 
   return (
