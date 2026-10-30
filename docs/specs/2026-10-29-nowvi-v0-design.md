@@ -45,7 +45,9 @@ Corpo: `{"url": "https://..."}`. A URL precisa ser `https` e o host tem de termi
     "height": 720,
     "filesize_bytes": 18400000,
     "token": "string",
-    "available_at": 1793330000
+    "available_at": 1793330000,
+    "wait_seconds": 30,
+    "expires_in_seconds": 930
   },
   "full_hd_available": true
 }
@@ -53,27 +55,37 @@ Corpo: `{"url": "https://..."}`. A URL precisa ser `https` e o host tem de termi
 - `platform`: `instagram`, `tiktok`, `x` ou `facebook`.
 - `filesize_bytes` pode vir `null`.
 - `available_at`: unix em segundos, a partir do qual o token vale.
+- `wait_seconds` e `expires_in_seconds` são relativos ao momento da resposta. A web conta a espera
+  por eles, nunca pelo relógio do aparelho.
+- `thumbnail` só sai quando é `https`. Fora disso, vem `null`.
 
 Erros:
-- `400 invalid_url`: não é URL https.
+- `400 invalid_url`: não é URL https, tem userinfo ou tem porta.
 - `422 unsupported_platform`: o host está fora da lista.
+- `422 too_long`: o vídeo passa de 15 min.
 - `404 not_found`: o vídeo é privado, foi apagado ou o post não tem vídeo.
 - `429 rate_limited`
 - `502 extract_failed`: o yt-dlp falhou ou passou de 25 s.
-- `503 busy`: o semáforo está cheio.
+- `503 busy`: o semáforo está cheio ou o IP já tem 2 jobs em andamento.
 
-Execução: `yt-dlp -J --no-playlist --no-warnings -f "<FREE_FORMAT>" -- <url>` com timeout de 25 s.
-O `FREE_FORMAT` é
-`best[height<=720][ext=mp4][vcodec!=none][acodec!=none]/best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]`.
-O `format_id` resolvido entra no token, e `full_hd_available` = existe um formato em `formats[]`
-com `height >= 1080`.
+Execução: `yt-dlp -J --no-playlist --flat-playlist --ignore-config --no-plugin-dirs --no-cache-dir
+--use-extractors instagram,tiktok,twitter,facebook -f "<FREE_FORMAT>" -- <url>`, com timeout de 25 s.
+O ambiente vai limpo (só `PATH` e `HOME=/tmp`), o stdout é limitado a 2 MiB e o stderr a 8 KiB.
+Depois do `-J`, o `webpage_url` passa de novo pelo allowlist.
+
+O `FREE_FORMAT` limita o lado menor do vídeo a 720, então o vertical usa `width<=720` (veja
+`src/video/ytdlp.rs`). O `format_id` e a `ext` resolvidos entram no token. `full_hd_available` =
+o lado menor `>= 1080` em algum formato.
 
 ### `GET /api/download?token=<token>`
-- `200` faz stream de `yt-dlp -f <format_id> --no-playlist -o - -- <url>` com
-  `Content-Type: video/mp4`, `Content-Disposition: attachment; filename="nowvi-<platform>-<unix>.mp4"`
-  e `Cache-Control: no-store`.
-- Erros: `401 invalid_token`, `425 too_early` (antes de `nbf`), `410 expired` (depois de `exp` = `nbf` + 15 min)
-  e `503 busy`.
+- `200` faz stream de `yt-dlp -f <format_id> --no-playlist --max-filesize 500M -o - -- <url>` (com
+  as mesmas flags e o mesmo ambiente do info). Headers: `Content-Type` pela `ext`,
+  `Content-Disposition: attachment; filename="nowvi-<platform>-<unix>.<ext>"`,
+  `Cache-Control: no-store` e `X-Content-Type-Options: nosniff`.
+- Limites do stream: 10 min no total, e 30 s sem chunk encerra.
+- O download é uma navegação do browser, então o erro **não** vem em JSON. A resposta é `303` para
+  `<primeiro WEB_ORIGIN>/?erro=<codigo>`, com o código sendo `invalid_token`, `too_early`,
+  `expired`, `busy` ou `extract_failed`. A web lê o `?erro=`, mostra o texto fixo e limpa a query.
 - Um download concluído grava uma linha em `downloads` (`platform`, `quality` = `"720p"`, `created_at`).
   Se a gravação falhar, o erro vai para o log e o download não cai.
 - Se o cliente desconectar, o processo filho morre (`kill_on_drop`).
@@ -84,12 +96,16 @@ fica no NOWVI-2.
 
 ### Token
 O formato é `base64url(json).base64url(hmac_sha256(secret, json))`, com o json
-`{"u": url, "p": platform, "f": format_id, "nbf": unix, "exp": unix}`. A comparação do HMAC é em
+`{"u": url, "p": platform, "f": format_id, "e": ext, "nbf": unix, "exp": unix}`. A comparação do HMAC é em
 tempo constante.
 
 ### Proteções
 - Rate limit por IP em `/api/*`, com burst de 10 e reposição de 1 a cada 3 s. O IP vem de
-  `X-Forwarded-For`, porque o Railway fica na frente.
+  `X-Real-IP` e, na falta dele, do último item do `X-Forwarded-For`, porque o Railway fica na
+  frente. IPv6 é agrupado por /64.
+- No máximo 2 jobs em andamento por IP, somando info e download.
+- O token pode ser reusado até o `exp`, e cada reuso conta como um download. O nonce de uso único
+  fica para depois.
 - Semáforo global de `MAX_CONCURRENT_JOBS` (padrão 6) processos de yt-dlp.
 - A URL vai depois de `--`, para nunca virar flag. O processo filho não passa por shell.
 - O corpo é limitado a 4 KB.
@@ -119,7 +135,7 @@ Uma página com estados encadeados, sem trocar de rota:
    das redes, "Como funciona", FAQ, rodapé e o banner de cookies LGPD.
 2. **Detalhes e qualidade** (`design/2-escolha-de-qualidade`): card do vídeo, card do Full HD com
    R$ 2 e card do Grátis 720p.
-3. **Espera** (`design/3-espera-com-anuncio-gratis`): contagem regressiva até `available_at`, slot
+3. **Espera** (`design/3-espera-com-anuncio-gratis`): contagem regressiva por `wait_seconds`, slot
    do anúncio, barra de progresso e o upsell de Full HD. Ao fim, o botão vira "Baixar agora", que
    aponta o link para `GET /api/download`.
 4. **Pix** (`design/4-pagamento-pix`): sheet com o resumo. Com `payments_disabled`, mostra o aviso
