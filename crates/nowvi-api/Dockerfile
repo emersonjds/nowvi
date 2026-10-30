@@ -1,11 +1,11 @@
 # Build context: the repo root (docker build -f crates/nowvi-api/Dockerfile .).
-FROM rust:1.97-slim-bookworm AS build
+FROM rust:1.97-slim-bookworm@sha256:2775a09d208ff0d7c1f50490c45b62db929e87ba1dcbc3f2132ac71a704bcdd3 AS build
 WORKDIR /src
 COPY crates/nowvi-api ./
 RUN cargo build --release --locked
 
 # The standalone yt-dlp bundles its own Python; ffmpeg comes back with NOWVI-13.
-FROM debian:bookworm-slim AS ytdlp
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3 AS ytdlp
 ARG YTDLP_VERSION=2026.10.26
 ARG TARGETARCH
 WORKDIR /ytdlp
@@ -17,7 +17,7 @@ RUN apt-get update \
     && grep " $asset\$" SHA2-256SUMS | sha256sum -c - \
     && install -m 755 "$asset" /usr/local/bin/yt-dlp
 
-FROM debian:bookworm-slim
+FROM debian:bookworm-slim@sha256:99c0b25c46d0214d5a2091092e7908907dcaecd6a962cde0ac700acee222b6f3
 RUN apt-get update \
     && apt-get install -y --no-install-recommends ca-certificates tini \
     && rm -rf /var/lib/apt/lists/*

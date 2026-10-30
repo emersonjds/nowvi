@@ -1,7 +1,0 @@
-[build]
-builder = "DOCKERFILE"
-dockerfilePath = "crates/nowvi-api/Dockerfile"
-watchPatterns = ["crates/**"]
-
-[deploy]
-healthcheckPath = "/health"
