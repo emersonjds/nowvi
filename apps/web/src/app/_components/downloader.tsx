@@ -19,7 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from "@/components/ui/input-group";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ERROR_MESSAGES, type ErrorCode, fetchVideoInfo, type VideoInfo } from "@/lib/api";
+import { ERROR_MESSAGES, type ErrorCode, errorCodeSchema, fetchVideoInfo, type VideoInfo } from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
 import { PixSheet } from "./pix-sheet";
@@ -27,16 +27,18 @@ import { QualityOptions } from "./quality-options";
 import { VideoCard } from "./video-card";
 import { WaitingPanel } from "./waiting-panel";
 
+type Ticket = { video: VideoInfo; readyAt: number; expiresAt: number };
+
 type State =
   | { status: "idle" }
   | { status: "loading" }
   | { status: "error"; code: ErrorCode }
-  | { status: "ready"; video: VideoInfo }
-  | { status: "waiting"; video: VideoInfo; startedAt: number };
+  | ({ status: "ready" } & Ticket)
+  | ({ status: "waiting"; startedAt: number } & Ticket);
 
 type Action =
   | { type: "submit" }
-  | { type: "loaded"; video: VideoInfo }
+  | ({ type: "loaded" } & Ticket)
   | { type: "failed"; code: ErrorCode }
   | { type: "wait"; startedAt: number }
   | { type: "reset" };
@@ -46,11 +48,11 @@ const reducer = (state: State, action: Action): State => {
     case "submit":
       return { status: "loading" };
     case "loaded":
-      return { status: "ready", video: action.video };
+      return { status: "ready", video: action.video, readyAt: action.readyAt, expiresAt: action.expiresAt };
     case "failed":
       return { status: "error", code: action.code };
     case "wait":
-      return state.status === "ready" ? { status: "waiting", video: state.video, startedAt: action.startedAt } : state;
+      return state.status === "ready" ? { ...state, status: "waiting", startedAt: action.startedAt } : state;
     case "reset":
       return { status: "idle" };
   }
@@ -74,10 +76,19 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
   const focusInputRef = useRef(false);
 
   useEffect(() => {
+    const code = new URLSearchParams(window.location.search).get("erro");
+    if (code === null) return;
+    window.history.replaceState(null, "", window.location.pathname);
+    const parsed = errorCodeSchema.safeParse(code);
+    if (parsed.success) dispatch({ type: "failed", code: parsed.data });
+  }, []);
+
+  useEffect(() => {
     if (state.status === "ready" || state.status === "waiting") {
       sectionRef.current?.scrollIntoView({ block: "start" });
+      sectionRef.current?.querySelector<HTMLElement>("h2")?.focus({ preventScroll: true });
     }
-    if (state.status === "idle" && focusInputRef.current) {
+    if (state.status === "error" || (state.status === "idle" && focusInputRef.current)) {
       focusInputRef.current = false;
       inputRef.current?.focus();
     }
@@ -101,7 +112,17 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
     setUrl(normalized);
     dispatch({ type: "submit" });
     const result = await fetchVideoInfo(normalized);
-    dispatch(result.ok ? { type: "loaded", video: result.data } : { type: "failed", code: result.code });
+    if (!result.ok) {
+      dispatch({ type: "failed", code: result.code });
+      return;
+    }
+    const receivedAt = Date.now();
+    dispatch({
+      type: "loaded",
+      video: result.data,
+      readyAt: receivedAt + result.data.free.wait_seconds * 1000 + 1000,
+      expiresAt: receivedAt + result.data.free.expires_in_seconds * 1000,
+    });
   };
 
   const reset = () => {
@@ -111,7 +132,16 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
     dispatch({ type: "reset" });
   };
 
+  const expire = () => {
+    setPixOpen(false);
+    dispatch({ type: "failed", code: "expired" });
+  };
+
   const startFree = () => {
+    if (state.status === "ready" && Date.now() > state.expiresAt) {
+      expire();
+      return;
+    }
     setPixOpen(false);
     dispatch({ type: "wait", startedAt: Date.now() });
   };
@@ -135,8 +165,10 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
             <WaitingPanel
               video={video}
               startedAt={state.startedAt}
+              readyAt={state.readyAt}
+              expiresAt={state.expiresAt}
               onFullHd={openPix}
-              onExpired={() => dispatch({ type: "failed", code: "expired" })}
+              onExpired={expire}
             />
           ) : (
             <>
@@ -152,6 +184,7 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
 
           {video.full_hd_available ? (
             <PixSheet
+              key={video.free.token}
               open={pixOpen}
               onOpenChange={setPixOpen}
               url={url}

@@ -1,3 +1,7 @@
+"use client";
+
+import { useState } from "react";
+
 import { FilmIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -18,28 +22,40 @@ const formatDuration = (seconds: number) => {
 
 type VideoCardProps = { video: VideoInfo; detail?: string };
 
-export const VideoCard = ({ video, detail }: VideoCardProps) => (
-  <article className="bg-card flex gap-4 rounded-2xl border p-4 shadow-sm">
-    <div className="bg-muted relative aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-xl sm:w-32">
-      {video.thumbnail ? (
-        // biome-ignore lint/performance/noImgElement: thumbnails come from arbitrary social CDNs, outside next/image remotePatterns
-        <img src={video.thumbnail} alt="" className="size-full object-cover" referrerPolicy="no-referrer" />
-      ) : (
-        <FilmIcon className="text-muted-foreground absolute inset-0 m-auto size-8" aria-hidden />
-      )}
-      {video.duration_seconds ? (
-        <span className="bg-foreground/80 text-background absolute right-1.5 bottom-1.5 rounded-md px-1.5 py-0.5 text-xs font-semibold">
-          {formatDuration(video.duration_seconds)}
-        </span>
-      ) : null}
-    </div>
-    <div className="flex min-w-0 flex-col gap-2">
-      <Badge variant="secondary" className="text-primary">
-        {PLATFORM_LABEL[video.platform]}
-      </Badge>
-      <h2 className="line-clamp-3 text-lg leading-6 font-semibold">{video.title}</h2>
-      {video.author ? <p className="text-muted-foreground truncate text-sm">{video.author}</p> : null}
-      {detail ? <p className="text-sm font-medium">{detail}</p> : null}
-    </div>
-  </article>
-);
+export const VideoCard = ({ video, detail }: VideoCardProps) => {
+  const [thumbnailFailed, setThumbnailFailed] = useState(false);
+
+  return (
+    <article className="bg-card flex gap-4 rounded-2xl border p-4 shadow-sm">
+      <div className="bg-muted relative aspect-[3/4] w-24 shrink-0 overflow-hidden rounded-xl sm:w-32">
+        {video.thumbnail && !thumbnailFailed ? (
+          // biome-ignore lint/performance/noImgElement: thumbnails come from arbitrary social CDNs, outside next/image remotePatterns
+          <img
+            src={video.thumbnail}
+            alt=""
+            className="size-full object-cover"
+            referrerPolicy="no-referrer"
+            onError={() => setThumbnailFailed(true)}
+          />
+        ) : (
+          <FilmIcon className="text-muted-foreground absolute inset-0 m-auto size-8" aria-hidden />
+        )}
+        {video.duration_seconds ? (
+          <span className="bg-foreground/80 text-background absolute right-1.5 bottom-1.5 rounded-md px-1.5 py-0.5 text-xs font-semibold">
+            {formatDuration(video.duration_seconds)}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex min-w-0 flex-col gap-2">
+        <Badge variant="secondary" className="text-primary">
+          {PLATFORM_LABEL[video.platform]}
+        </Badge>
+        <h2 tabIndex={-1} className="line-clamp-3 text-lg leading-6 font-semibold outline-none">
+          {video.title}
+        </h2>
+        {video.author ? <p className="text-muted-foreground truncate text-sm">{video.author}</p> : null}
+        {detail ? <p className="text-sm font-medium">{detail}</p> : null}
+      </div>
+    </article>
+  );
+};

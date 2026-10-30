@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CirclePlayIcon, ShieldCheckIcon } from "lucide-react";
 
@@ -21,18 +21,14 @@ type PixSheetProps = {
 
 export const PixSheet = ({ open, onOpenChange, url, video, onFree }: PixSheetProps) => {
   const [result, setResult] = useState<ErrorCode | "loading">("loading");
+  const requested = useRef(false);
 
+  // The downloader keys this sheet by token, so the order is created once per token.
   useEffect(() => {
-    if (!open) return;
-    let active = true;
-    setResult("loading");
+    if (!open || requested.current) return;
+    requested.current = true;
     // ponytail: no QR flow until NOWVI-2, so any accepted order still reads as "coming soon".
-    void createOrder(url).then((response) => {
-      if (active) setResult(response.ok ? "payments_disabled" : response.code);
-    });
-    return () => {
-      active = false;
-    };
+    void createOrder(url).then((response) => setResult(response.ok ? "payments_disabled" : response.code));
   }, [open, url]);
 
   return (

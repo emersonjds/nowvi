@@ -3,12 +3,11 @@
 import { type MouseEvent, useEffect, useState } from "react";
 
 import { ArrowRightIcon, DownloadIcon, FilmIcon, LockIcon, ZapIcon } from "lucide-react";
-import { toast } from "sonner";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
-import { downloadUrl, TOKEN_LIFETIME_MS, type VideoInfo } from "@/lib/api";
+import { downloadUrl, type VideoInfo } from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
 
@@ -18,17 +17,18 @@ const formatMegabytes = (bytes: number) =>
 type WaitingPanelProps = {
   video: VideoInfo;
   startedAt: number;
+  readyAt: number;
+  expiresAt: number;
   onFullHd?: () => void;
   onExpired: () => void;
 };
 
-export const WaitingPanel = ({ video, startedAt, onFullHd, onExpired }: WaitingPanelProps) => {
-  const deadline = video.free.available_at * 1000;
+export const WaitingPanel = ({ video, startedAt, readyAt, expiresAt, onFullHd, onExpired }: WaitingPanelProps) => {
   const [now, setNow] = useState(startedAt);
-  const remainingMs = Math.max(0, deadline - now);
+  const remainingMs = Math.max(0, readyAt - now);
   const done = remainingMs === 0;
   const seconds = Math.ceil(remainingMs / 1000);
-  const progress = 100 - (remainingMs / Math.max(1, deadline - startedAt)) * 100;
+  const progress = 100 - (remainingMs / Math.max(1, readyAt - startedAt)) * 100;
 
   useEffect(() => {
     if (done) return;
@@ -37,12 +37,9 @@ export const WaitingPanel = ({ video, startedAt, onFullHd, onExpired }: WaitingP
   }, [done]);
 
   const handleDownload = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (Date.now() > deadline + TOKEN_LIFETIME_MS) {
-      event.preventDefault();
-      onExpired();
-      return;
-    }
-    toast.success("Download iniciado");
+    if (Date.now() <= expiresAt) return;
+    event.preventDefault();
+    onExpired();
   };
 
   return (
@@ -52,10 +49,10 @@ export const WaitingPanel = ({ video, startedAt, onFullHd, onExpired }: WaitingP
           <ZapIcon aria-hidden />
           Acesso gratuito
         </Badge>
-        <h2 id="espera-titulo" className="text-[26px] leading-8 font-bold tracking-tight">
+        <h2 id="espera-titulo" tabIndex={-1} className="text-[26px] leading-8 font-bold tracking-tight outline-none">
           {done ? "Seu download está liberado" : "Liberando seu download…"}
         </h2>
-        <p className="text-muted-foreground" aria-live="polite" aria-atomic="true">
+        <p className="text-muted-foreground">
           {done ? (
             "Toque em Baixar agora para salvar o vídeo."
           ) : (
@@ -64,6 +61,9 @@ export const WaitingPanel = ({ video, startedAt, onFullHd, onExpired }: WaitingP
               aberta.
             </>
           )}
+        </p>
+        <p className="sr-only" aria-live="polite">
+          {done ? "Download liberado" : ""}
         </p>
       </div>
 
