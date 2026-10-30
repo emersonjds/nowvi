@@ -123,12 +123,18 @@ NEXT_PUBLIC_API_URL=http://localhost:8080 NEXT_PUBLIC_SITE_URL=http://localhost:
 ```bash
 cd crates/nowvi-api && cargo fmt --check && cargo clippy --all-targets -- -D warnings
 cd apps/web && npm run check && npx tsc --noEmit && npm run build
+
+# Antes de cada release
+cd apps/web && npm audit --omit=dev
+cd crates/nowvi-api && cargo audit   # cargo install cargo-audit
 ```
 
 ## Deploy
 
 O deploy é no [Railway](https://railway.com), com 3 serviços: `web`, `api` e `Postgres`. Cada app
-tem o seu `Dockerfile` e o seu `railway.toml`. Todo push na `main` publica.
+tem o seu `Dockerfile`, com as imagens base fixadas por digest. O healthcheck (`/health` na api e `/`
+no web) e a política de restart ficam na config do serviço (`railway environment edit`). Todo push na
+`main` publica.
 
 | Serviço | URL |
 |---|---|
