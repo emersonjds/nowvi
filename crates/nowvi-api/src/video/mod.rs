@@ -58,6 +58,7 @@ pub struct FormatItem {
     filesize_bytes: Option<u64>,
     tier: Tier,
     token: Option<String>,
+    h264: bool,
 }
 
 #[derive(Serialize)]
@@ -131,7 +132,7 @@ pub async fn info(
                     (1..=5).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric())
                 })
                 .unwrap_or_else(|| "bin".into());
-            let quality = format!("{}p", pick.height);
+            let quality = pick.quality.clone();
             let token = (pick.tier == Tier::Free).then(|| {
                 token::sign(
                     &state.config.token_secret,
@@ -153,6 +154,7 @@ pub async fn info(
                 filesize_bytes: pick.filesize_bytes,
                 tier: pick.tier,
                 token,
+                h264: pick.h264,
             }
         })
         .collect();

@@ -78,6 +78,17 @@ pub struct Pick {
     pub height: u32,
     pub filesize_bytes: Option<u64>,
     pub tier: Tier,
+    pub h264: bool,
+    /// `"<height>p"`, or the extractor's own name (`HD`, `SD`) when it lists no size.
+    pub quality: String,
+}
+
+/// H.264, or an mp4 with no codec listed (X's progressive files are H.264): what WhatsApp plays.
+fn is_h264(format: &Format) -> bool {
+    match format.vcodec.as_deref() {
+        Some(codec) => codec.starts_with("avc") || codec.starts_with("h264"),
+        None => format.ext.as_deref() == Some("mp4"),
+    }
 }
 
 /// Progressive formats only, with a missing `acodec` counted in (part of X leaves it null): the
@@ -85,17 +96,15 @@ pub struct Pick {
 /// Up to 4 free (<= 720), largest first, after the single largest full HD (>= 1080).
 pub fn pick_formats(formats: &[Format]) -> Vec<Pick> {
     let rank = |format: &Format| {
-        let h264 = format
-            .vcodec
-            .as_deref()
-            .is_some_and(|codec| codec.starts_with("avc") || codec.starts_with("h264"));
         (
-            h264,
+            is_h264(format),
             format.ext.as_deref() == Some("mp4"),
             format.tbr.unwrap_or(0.0),
         )
     };
     let mut best: BTreeMap<u32, &Format> = BTreeMap::new();
+    // Facebook lists its progressive `hd` and `sd` mp4 with no width or height.
+    let mut sizeless: Vec<&Format> = Vec::new();
     for format in formats {
         if format.format_id.is_none()
             || format.vcodec.as_deref() == Some("none")
@@ -104,6 +113,9 @@ pub fn pick_formats(formats: &[Format]) -> Vec<Pick> {
             continue;
         }
         let Some(side) = short_side(format.width, format.height) else {
+            if format.ext.as_deref() == Some("mp4") {
+                sizeless.push(format);
+            }
             continue;
         };
         let kept = best.entry(side as u32).or_insert(format);
@@ -120,6 +132,8 @@ pub fn pick_formats(formats: &[Format]) -> Vec<Pick> {
             .or(format.filesize_approx)
             .map(|bytes| bytes as u64),
         tier,
+        h264: is_h264(format),
+        quality: format!("{height}p"),
     };
     let full_hd = best
         .range(1080..)
@@ -128,9 +142,29 @@ pub fn pick_formats(formats: &[Format]) -> Vec<Pick> {
     let free = best
         .range(..=720)
         .rev()
-        .take(4)
         .map(|entry| pick(entry, Tier::Free));
-    full_hd.into_iter().chain(free).collect()
+    // ponytail: an sizeless `hd` may be 1080p and still ships free; tier it once yt-dlp sizes it.
+    sizeless.sort_by_key(|format| format.format_id.as_deref() != Some("hd"));
+    let sizeless = sizeless.into_iter().map(|format| Pick {
+        format_id: format.format_id.clone().unwrap_or_default(),
+        ext: "mp4".to_owned(),
+        height: 0,
+        filesize_bytes: format
+            .filesize
+            .or(format.filesize_approx)
+            .map(|bytes| bytes as u64),
+        tier: Tier::Free,
+        h264: is_h264(format),
+        quality: format
+            .format_id
+            .as_deref()
+            .unwrap_or("video")
+            .to_uppercase(),
+    });
+    full_hd
+        .into_iter()
+        .chain(free.chain(sizeless).take(4))
+        .collect()
 }
 
 /// The quality a video is sold by: 720p and 1080p name the short side.
@@ -329,6 +363,31 @@ mod tests {
                 (720, "http-2176".into(), Tier::Free, Some(31095584)),
                 (360, "http-832".into(), Tier::Free, Some(11889488)),
                 (270, "http-256".into(), Tier::Free, Some(3658304)),
+            ]
+        );
+    }
+
+    /// `yt-dlp -J` of facebook.com/reel/1195289147628387 on 2026-10-30: progressive `hd`/`sd` with
+    /// no size, DASH vp9 without audio and an m4a track.
+    const FACEBOOK: &str = r#"[
+        {"format_id":"1418122939762069a","ext":"m4a","vcodec":"none","acodec":"mp4a.40.5","width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
+        {"format_id":"sd","ext":"mp4","vcodec":null,"acodec":null,"width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
+        {"format_id":"hd","ext":"mp4","vcodec":null,"acodec":null,"width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
+        {"format_id":"1417507216490308v","ext":"mp4","vcodec":"vp09.00.21.08.01.01.01.01.00","acodec":"none","width":360,"height":636,"tbr":null,"filesize":null,"filesize_approx":null}
+    ]"#;
+
+    #[test]
+    fn facebook_offers_its_sizeless_hd_and_sd_as_free() {
+        let formats: Vec<Format> = serde_json::from_str(FACEBOOK).unwrap();
+        let picked: Vec<(String, String, Tier, bool)> = pick_formats(&formats)
+            .into_iter()
+            .map(|pick| (pick.quality, pick.format_id, pick.tier, pick.h264))
+            .collect();
+        assert_eq!(
+            picked,
+            [
+                ("HD".to_owned(), "hd".to_owned(), Tier::Free, true),
+                ("SD".to_owned(), "sd".to_owned(), Tier::Free, true),
             ]
         );
     }
