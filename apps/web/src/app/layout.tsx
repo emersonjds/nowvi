@@ -20,6 +20,7 @@ export const metadata: Metadata = {
   authors: [{ name: APP_CONFIG.name }],
   title: APP_CONFIG.meta.title,
   description: APP_CONFIG.meta.description,
+  keywords: APP_CONFIG.meta.keywords,
   openGraph: {
     type: "website",
     siteName: APP_CONFIG.name,

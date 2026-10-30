@@ -2,7 +2,12 @@ import { ZapIcon } from "lucide-react";
 
 import { APP_CONFIG } from "@/config/app-config";
 
-const LINKS = ["Termos de Uso", "Política de Privacidade", "Remoção de Conteúdo (DMCA)", "Contato"];
+const LINKS = [
+  { label: "Termos de Uso", href: "/#termos" },
+  { label: "Política de Privacidade", href: "/#privacidade" },
+  { label: "Remoção de Conteúdo (DMCA)", href: "/#dmca" },
+  { label: "Contato", href: "mailto:contato@nowvi.com.br" },
+];
 
 export const SiteFooter = () => (
   <footer className="bg-muted border-t">
@@ -16,10 +21,9 @@ export const SiteFooter = () => (
       </p>
       <nav aria-label="Links legais">
         <ul className="flex flex-wrap justify-center gap-x-2">
-          {LINKS.map((label) => (
+          {LINKS.map(({ label, href }) => (
             <li key={label}>
-              {/* biome-ignore lint/a11y/useValidAnchor: placeholder until the legal pages exist */}
-              <a href="#" className="hover:text-primary flex min-h-11 items-center px-2 text-sm">
+              <a href={href} className="hover:text-primary flex min-h-11 items-center px-2 text-sm">
                 {label}
               </a>
             </li>

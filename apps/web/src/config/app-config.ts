@@ -3,8 +3,18 @@ export const APP_CONFIG = {
   url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
   copyright: `© ${new Date().getFullYear()} Nowvi. Não somos afiliados às redes sociais citadas.`,
   meta: {
-    title: "Nowvi: baixe vídeos do Instagram, TikTok, X e Facebook",
+    title: "Nowvi: baixar vídeo do Instagram, TikTok, X e Facebook",
     description:
-      "Cole o link e baixe vídeos do Instagram, TikTok, X e Facebook em até 720p grátis, ou em Full HD por R$ 2 no Pix.",
+      "Baixe vídeos do Instagram, TikTok, X e Facebook sem marca d'água e sem cadastro. Grátis até 720p; Full HD por R$ 2 no Pix. Nada fica salvo no servidor.",
+    keywords: [
+      "baixar vídeo instagram",
+      "baixar vídeo tiktok sem marca d'água",
+      "baixar vídeo do x",
+      "baixar vídeo facebook mp4",
+      "baixar reels instagram",
+      "download instagram sem cadastro",
+      "baixar vídeo full hd",
+      "baixador de vídeo online",
+    ],
   },
 };

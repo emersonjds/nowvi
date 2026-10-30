@@ -1,22 +1,20 @@
-import { CookieBanner } from "./_components/cookie-banner";
-import { Downloader } from "./_components/downloader";
-import { Faq } from "./_components/faq";
-import { Hero } from "./_components/hero";
-import { HowItWorks } from "./_components/how-it-works";
-import { SiteFooter } from "./_components/site-footer";
-import { SiteHeader } from "./_components/site-header";
+import { DownloadPage } from "./_components/download-page";
+import { LegalSections } from "./_components/legal-sections";
+import { HOME, pageMetadata } from "./_content/landings";
+
+export const metadata = pageMetadata(HOME);
 
 export default function Home() {
   return (
-    <>
-      <SiteHeader />
-      <main className="mx-auto flex w-full max-w-2xl flex-col gap-16 px-4 pt-8 pb-16 md:pt-12">
-        <Downloader hero={<Hero />} />
-        <HowItWorks />
-        <Faq />
-      </main>
-      <SiteFooter />
-      <CookieBanner />
-    </>
+    <DownloadPage
+      content={HOME}
+      title={
+        <>
+          Baixe vídeos de qualquer rede, <span className="text-primary">num lugar só.</span>
+        </>
+      }
+    >
+      <LegalSections />
+    </DownloadPage>
   );
 }
