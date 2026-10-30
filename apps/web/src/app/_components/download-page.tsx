@@ -3,9 +3,10 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { APP_CONFIG } from "@/config/app-config";
+import { LOCALE_INFO, type Locale } from "@/i18n/config";
+import { getDictionary, LANDING_IDS, type PageKey, pageContent, pagePath } from "@/i18n/dictionary";
 import { pageJsonLd, serializeJsonLd } from "@/lib/json-ld";
 
-import { LANDINGS, type PageContent } from "../_content/landings";
 import { CookieBanner } from "./cookie-banner";
 import { Downloader } from "./downloader";
 import { Faq } from "./faq";
@@ -17,17 +18,25 @@ import { SiteHeader } from "./site-header";
 const linkClass =
   "bg-card hover:border-primary hover:text-primary flex min-h-11 items-center rounded-full border px-4 text-sm font-semibold";
 
-type DownloadPageProps = { content: PageContent; title?: ReactNode; children?: ReactNode };
+type DownloadPageProps = { locale: Locale; page: PageKey; children?: ReactNode };
 
-export const DownloadPage = ({ content, title, children }: DownloadPageProps) => {
+export const DownloadPage = ({ locale, page, children }: DownloadPageProps) => {
+  const dictionary = getDictionary(locale);
+  const content = pageContent(locale, page);
+  const homePath = pagePath(locale, "home");
+  const { highlight } = dictionary.home;
   const jsonLd = pageJsonLd({
-    url: new URL(content.path, APP_CONFIG.url).href,
+    url: new URL(pagePath(locale, page), APP_CONFIG.url).href,
     name: content.heading,
     description: content.description,
+    inLanguage: LOCALE_INFO[locale].htmlLang,
+    offers: [
+      { name: dictionary.offers.free, price: "0" },
+      ...(dictionary.client.features.fullHdPix ? [{ name: dictionary.offers.fullHd, price: "2.00" }] : []),
+    ],
     steps: content.steps,
     faq: content.faq,
   });
-  const isHome = content.path === "/";
 
   return (
     <>
@@ -39,27 +48,44 @@ export const DownloadPage = ({ content, title, children }: DownloadPageProps) =>
           dangerouslySetInnerHTML={{ __html: serializeJsonLd(data) }}
         />
       ))}
-      <SiteHeader />
+      <SiteHeader locale={locale} page={page} />
       <main className="mx-auto flex w-full max-w-2xl flex-col gap-16 px-4 pt-8 pb-16 md:pt-12">
-        <Downloader hero={<Hero title={title ?? content.heading} subtitle={content.subtitle} />} />
-        <HowItWorks steps={content.steps} />
-        <Faq questions={content.faq} />
+        <Downloader
+          hero={
+            <Hero
+              badge={dictionary.hero.badge}
+              subtitle={content.subtitle}
+              title={
+                page === "home" ? (
+                  <>
+                    {content.heading.replace(highlight, "")}
+                    <span className="text-primary">{highlight}</span>
+                  </>
+                ) : (
+                  content.heading
+                )
+              }
+            />
+          }
+        />
+        <HowItWorks steps={content.steps} copy={dictionary.howItWorks} />
+        <Faq questions={content.faq} copy={dictionary.faq} />
         <nav aria-labelledby="redes-titulo" className="flex flex-col items-center gap-4 text-center">
           <h2 id="redes-titulo" className="text-lg font-bold tracking-tight">
-            Baixar de uma rede específica
+            {dictionary.networks.title}
           </h2>
           <ul className="flex flex-wrap justify-center gap-2">
-            {!isHome && (
+            {page !== "home" && (
               <li>
-                <Link href="/" className={linkClass}>
-                  Todas as redes
+                <Link href={homePath} className={linkClass}>
+                  {dictionary.networks.all}
                 </Link>
               </li>
             )}
-            {LANDINGS.filter((landing) => landing.path !== content.path).map((landing) => (
-              <li key={landing.slug}>
-                <Link href={landing.path} className={linkClass}>
-                  {landing.network}
+            {LANDING_IDS.filter((id) => id !== page).map((id) => (
+              <li key={id}>
+                <Link href={pagePath(locale, id)} className={linkClass}>
+                  {dictionary.landings[id].network}
                 </Link>
               </li>
             ))}
@@ -67,7 +93,7 @@ export const DownloadPage = ({ content, title, children }: DownloadPageProps) =>
         </nav>
         {children}
       </main>
-      <SiteFooter />
+      <SiteFooter locale={locale} />
       <CookieBanner />
     </>
   );

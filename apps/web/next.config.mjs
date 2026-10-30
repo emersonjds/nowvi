@@ -35,6 +35,8 @@ const nextConfig = (phase) => {
   return {
     output: "standalone",
     reactCompiler: true,
+    // Every root layout sits under [lang]; unmatched URLs need a 404 with its own <html>.
+    experimental: { globalNotFound: true },
     compiler: {
       removeConsole: process.env.NODE_ENV === "production",
     },

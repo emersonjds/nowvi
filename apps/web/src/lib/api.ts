@@ -77,23 +77,6 @@ export type ErrorCode = z.infer<typeof errorCodeSchema> | "unknown";
 
 const errorBodySchema = z.object({ error: errorCodeSchema });
 
-export const ERROR_MESSAGES: Record<ErrorCode, string> = {
-  invalid_url: "Esse link não parece válido. Copie o link completo do vídeo, começando com https://.",
-  unsupported_platform: "Por enquanto o Nowvi baixa vídeos do TikTok, X e Facebook.",
-  platform_unavailable:
-    "O Instagram está temporariamente indisponível. Por enquanto, o Nowvi baixa vídeos do TikTok, X e Facebook.",
-  too_long: "Esse vídeo passa de 15 minutos. Por enquanto, o Nowvi baixa vídeos de até 15 minutos.",
-  not_found: "Não achamos esse vídeo. Ele pode ser privado, ter sido apagado ou o post não tem vídeo.",
-  rate_limited: "Muitas buscas em pouco tempo. Espere alguns segundos e tente de novo.",
-  extract_failed: "Não conseguimos ler esse vídeo agora. Tente de novo em instantes.",
-  busy: "Estamos com muitos downloads agora. Tente de novo em instantes.",
-  too_early: "O download ainda não foi liberado. Espere a contagem terminar.",
-  expired: "Esse link de download expirou. Faça uma nova busca.",
-  payments_disabled: "O Pix chega em breve. Por enquanto, baixe grátis em 720p.",
-  invalid_token: "O link de download não é válido. Busque o vídeo de novo.",
-  unknown: "Algo deu errado. Tente de novo em instantes.",
-};
-
 export type ApiResult<T> = { ok: true; data: T } | { ok: false; code: ErrorCode };
 
 const readErrorCode = async (response: Response): Promise<ErrorCode> => {

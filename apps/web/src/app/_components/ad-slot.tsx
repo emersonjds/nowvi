@@ -3,6 +3,7 @@
 import { ZapIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { useDictionary } from "@/i18n/client";
 
 import { useConsent } from "./cookie-banner";
 
@@ -15,14 +16,15 @@ type AdSlotProps = { onUpgrade?: () => void };
 
 export const AdSlot = ({ onUpgrade }: AdSlotProps) => {
   const consent = useConsent();
+  const copy = useDictionary().ad;
 
   return (
-    <aside aria-label="Publicidade" className="flex flex-col gap-1.5">
-      <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">Publicidade</p>
+    <aside aria-label={copy.label} className="flex flex-col gap-1.5">
+      <p className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">{copy.label}</p>
       <div className="bg-muted flex min-h-[250px] items-center justify-center overflow-hidden rounded-2xl">
         {ADSTERRA_KEY && consent === "accepted" ? (
           <iframe
-            title="Publicidade"
+            title={copy.label}
             width={300}
             height={250}
             sandbox="allow-scripts allow-popups allow-popups-to-escape-sandbox"
@@ -34,13 +36,11 @@ export const AdSlot = ({ onUpgrade }: AdSlotProps) => {
             <span className="bg-accent text-accent-foreground flex size-12 items-center justify-center rounded-xl">
               <ZapIcon className="size-6" aria-hidden />
             </span>
-            <p className="text-lg font-bold">Full HD 1080p sem anúncio</p>
-            <p className="text-muted-foreground max-w-xs text-sm">
-              Por R$ 2,00 no Pix o download sai na hora, sem espera e na melhor qualidade.
-            </p>
+            <p className="text-lg font-bold">{copy.title}</p>
+            <p className="text-muted-foreground max-w-xs text-sm">{copy.text}</p>
             {onUpgrade ? (
               <Button variant="link" className="h-11 font-semibold" onClick={onUpgrade}>
-                Quero o Full HD
+                {copy.upgrade}
               </Button>
             ) : null}
           </div>

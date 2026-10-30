@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Nowvi: baixe vídeos de qualquer rede, num lugar só";
+// One image serves every locale, so it carries only brand and network names.
+export const alt = "Nowvi: TikTok, X, Facebook";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -21,9 +22,7 @@ export default function OpengraphImage() {
       }}
     >
       <div style={{ fontSize: 120, fontWeight: 800, letterSpacing: -4 }}>Nowvi</div>
-      <div style={{ fontSize: 60, fontWeight: 700, lineHeight: 1.15, maxWidth: 900 }}>
-        Baixe vídeos de qualquer rede, num lugar só
-      </div>
+      <div style={{ fontSize: 60, fontWeight: 700, lineHeight: 1.15, maxWidth: 900 }}>TikTok • X • Facebook</div>
     </div>,
     size,
   );

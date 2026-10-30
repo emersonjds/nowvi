@@ -4,11 +4,11 @@ import { ZapIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 
-export const Hero = ({ title, subtitle }: { title: ReactNode; subtitle: string }) => (
+export const Hero = ({ title, subtitle, badge }: { title: ReactNode; subtitle: string; badge: string }) => (
   <div className="flex flex-col items-center gap-4 text-center">
     <Badge variant="secondary" className="text-primary h-7 px-3">
       <ZapIcon aria-hidden />
-      Grátis até 720p • Sem cadastro
+      {badge}
     </Badge>
     <h1 className="max-w-2xl text-[32px] leading-[38px] font-extrabold tracking-tight text-balance md:text-[44px] md:leading-[52px]">
       {title}

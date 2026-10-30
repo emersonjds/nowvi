@@ -1,9 +1,20 @@
 import type { MetadataRoute } from "next";
 
 import { APP_CONFIG } from "@/config/app-config";
+import { LOCALES } from "@/i18n/config";
+import { languageAlternates, PAGE_KEYS, pagePath } from "@/i18n/dictionary";
 
-import { HOME, LANDINGS } from "./_content/landings";
+const absolute = (path: string) => new URL(path, APP_CONFIG.url).href;
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  return [HOME, ...LANDINGS].map(({ path }) => ({ url: new URL(path, APP_CONFIG.url).href }));
+  return LOCALES.flatMap((locale) =>
+    PAGE_KEYS.map((page) => ({
+      url: absolute(pagePath(locale, page)),
+      alternates: {
+        languages: Object.fromEntries(
+          Object.entries(languageAlternates(page)).map(([language, path]) => [language, absolute(path)]),
+        ),
+      },
+    })),
+  );
 }
