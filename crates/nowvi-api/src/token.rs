@@ -15,6 +15,9 @@ pub struct Claims {
     pub p: String,
     pub f: String,
     pub e: String,
+    /// `"<height>p"`; tokens signed before NOWVI-22 lack it.
+    #[serde(default)]
+    pub q: String,
     pub nbf: u64,
     pub exp: u64,
 }

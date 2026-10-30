@@ -1,8 +1,9 @@
+use std::collections::BTreeMap;
 use std::io;
 use std::process::Stdio;
 use std::time::Duration;
 
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::io::AsyncReadExt;
 use tokio::process::{Child, ChildStderr, Command};
 use url::Url;
@@ -26,24 +27,6 @@ const COMMON_ARGS: [&str; 7] = [
     "--no-warnings",
 ];
 
-/// The spec's 720p ladder, capped on the short side: a vertical 720x1280 reel caps on width.
-/// Each step tries H.264 first (`avc1` or, on TikTok, `h264`): HEVC does not play on part of
-/// the Androids nor in WhatsApp.
-const FREE_FORMAT: &str = concat!(
-    "best[height<=720][aspect_ratio>=1][ext=mp4][vcodec~='^(avc|h264)'][acodec!=none]/",
-    "best[height<=720][aspect_ratio>=1][ext=mp4][vcodec!=none][acodec!=none]/",
-    "best[width<=720][aspect_ratio<1][ext=mp4][vcodec~='^(avc|h264)'][acodec!=none]/",
-    "best[width<=720][aspect_ratio<1][ext=mp4][vcodec!=none][acodec!=none]/",
-    "best[height<=720][aspect_ratio>=1][vcodec~='^(avc|h264)'][acodec!=none]/",
-    "best[height<=720][aspect_ratio>=1][vcodec!=none][acodec!=none]/",
-    "best[width<=720][aspect_ratio<1][vcodec~='^(avc|h264)'][acodec!=none]/",
-    "best[width<=720][aspect_ratio<1][vcodec!=none][acodec!=none]/",
-    "best[height<=720][aspect_ratio>=1][vcodec~='^(avc|h264)']/",
-    "best[height<=720][aspect_ratio>=1]/",
-    "best[width<=720][aspect_ratio<1][vcodec~='^(avc|h264)']/",
-    "best[width<=720][aspect_ratio<1]",
-);
-
 /// What yt-dlp prints on stderr for a private, deleted or video-less post.
 const NOT_FOUND_HINTS: [&str; 5] = [
     "private",
@@ -56,8 +39,6 @@ const NOT_FOUND_HINTS: [&str; 5] = [
 /// The fields of `yt-dlp -J` the API reads.
 #[derive(Debug, Deserialize)]
 pub struct Probe {
-    pub format_id: Option<String>,
-    pub ext: Option<String>,
     pub webpage_url: Option<String>,
     pub title: Option<String>,
     pub uploader: Option<String>,
@@ -65,18 +46,91 @@ pub struct Probe {
     pub creator: Option<String>,
     pub thumbnail: Option<String>,
     pub duration: Option<f64>,
-    pub width: Option<f64>,
-    pub height: Option<f64>,
-    pub filesize: Option<f64>,
-    pub filesize_approx: Option<f64>,
     #[serde(default)]
     pub formats: Vec<Format>,
 }
 
 #[derive(Debug, Deserialize)]
 pub struct Format {
+    pub format_id: Option<String>,
+    pub ext: Option<String>,
+    pub vcodec: Option<String>,
+    pub acodec: Option<String>,
     pub width: Option<f64>,
     pub height: Option<f64>,
+    pub tbr: Option<f64>,
+    pub filesize: Option<f64>,
+    pub filesize_approx: Option<f64>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum Tier {
+    Free,
+    FullHd,
+}
+
+/// One quality the page offers: `height` is the short side.
+#[derive(Debug, PartialEq)]
+pub struct Pick {
+    pub format_id: String,
+    pub ext: String,
+    pub height: u32,
+    pub filesize_bytes: Option<u64>,
+    pub tier: Tier,
+}
+
+/// Progressive formats only, with a missing `acodec` counted in (part of X leaves it null): the
+/// image has no ffmpeg to merge. One per short side, ranked H.264, then mp4, then the higher `tbr`.
+/// Up to 4 free (<= 720), largest first, after the single largest full HD (>= 1080).
+pub fn pick_formats(formats: &[Format]) -> Vec<Pick> {
+    let rank = |format: &Format| {
+        let h264 = format
+            .vcodec
+            .as_deref()
+            .is_some_and(|codec| codec.starts_with("avc") || codec.starts_with("h264"));
+        (
+            h264,
+            format.ext.as_deref() == Some("mp4"),
+            format.tbr.unwrap_or(0.0),
+        )
+    };
+    let mut best: BTreeMap<u32, &Format> = BTreeMap::new();
+    for format in formats {
+        if format.format_id.is_none()
+            || format.vcodec.as_deref() == Some("none")
+            || format.acodec.as_deref() == Some("none")
+        {
+            continue;
+        }
+        let Some(side) = short_side(format.width, format.height) else {
+            continue;
+        };
+        let kept = best.entry(side as u32).or_insert(format);
+        if rank(format) > rank(kept) {
+            *kept = format;
+        }
+    }
+    let pick = |(&height, format): (&u32, &&Format), tier| Pick {
+        format_id: format.format_id.clone().unwrap_or_default(),
+        ext: format.ext.clone().unwrap_or_default(),
+        height,
+        filesize_bytes: format
+            .filesize
+            .or(format.filesize_approx)
+            .map(|bytes| bytes as u64),
+        tier,
+    };
+    let full_hd = best
+        .range(1080..)
+        .next_back()
+        .map(|entry| pick(entry, Tier::FullHd));
+    let free = best
+        .range(..=720)
+        .rev()
+        .take(4)
+        .map(|entry| pick(entry, Tier::Free));
+    full_hd.into_iter().chain(free).collect()
 }
 
 /// The quality a video is sold by: 720p and 1080p name the short side.
@@ -132,9 +186,10 @@ fn log_stderr(what: &str, platform: &str, url: &Url, stderr: &[u8]) {
     tracing::debug!(platform, host = url.host_str(), stderr = %head, "{what}");
 }
 
-/// `yt-dlp -J` with the free format; dropped on timeout, which kills the child.
+/// `yt-dlp -J`; dropped on timeout, which kills the child. The API picks from `formats[]`, so
+/// `-f b*` (anything with video or audio) only keeps the default selector from failing the probe.
 pub async fn probe(bin: &str, url: &Url, platform: &str) -> Result<Probe, AppError> {
-    let mut child = spawn(bin, &["-J", "--flat-playlist", "-f", FREE_FORMAT], url)?;
+    let mut child = spawn(bin, &["-J", "--flat-playlist", "-f", "b*"], url)?;
     let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
         return Err(AppError::ExtractFailed);
     };
@@ -164,8 +219,7 @@ pub async fn probe(bin: &str, url: &Url, platform: &str) -> Result<Probe, AppErr
     if !status.success() {
         log_stderr("yt-dlp probe stderr", platform, url, &stderr);
         let lower = String::from_utf8_lossy(&stderr).to_lowercase();
-        let no_free_format = lower.contains("requested format is not available");
-        let error = if !no_free_format && NOT_FOUND_HINTS.iter().any(|hint| lower.contains(hint)) {
+        let error = if NOT_FOUND_HINTS.iter().any(|hint| lower.contains(hint)) {
             AppError::NotFound
         } else {
             AppError::ExtractFailed
@@ -206,4 +260,81 @@ pub fn stream(bin: &str, url: &Url, platform: &str, format_id: &str) -> Result<C
         });
     }
     Ok(child)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn picks(rows: &str) -> Vec<(u32, String, Tier, Option<u64>)> {
+        let formats: Vec<Format> = serde_json::from_str(rows).unwrap();
+        pick_formats(&formats)
+            .into_iter()
+            .map(|pick| (pick.height, pick.format_id, pick.tier, pick.filesize_bytes))
+            .collect()
+    }
+
+    /// `yt-dlp -J` of tiktok.com/@scout2015/video/6718335390845095173 on 2026-10-30.
+    const TIKTOK: &str = r#"[
+        {"format_id":"audio","ext":"mp3","vcodec":"none","acodec":"mp3","width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
+        {"format_id":"h264_540p_992286-0","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":992,"filesize":1307586,"filesize_approx":null},
+        {"format_id":"h264_540p_992286-1","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":992,"filesize":1307586,"filesize_approx":null},
+        {"format_id":"h264_540p_1376802-0","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":1376,"filesize":1814281,"filesize_approx":null},
+        {"format_id":"h264_540p_1376802-1","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":1376,"filesize":1814281,"filesize_approx":null},
+        {"format_id":"h264_540p_2240963-0","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":2240,"filesize":2953029,"filesize_approx":null},
+        {"format_id":"h264_540p_2240963-1","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":2240,"filesize":2953029,"filesize_approx":null},
+        {"format_id":"bytevc1_540p_1297374-0","ext":"mp4","vcodec":"h265","acodec":"aac","width":576,"height":1024,"tbr":1297,"filesize":1728265,"filesize_approx":null},
+        {"format_id":"bytevc1_540p_1297374-1","ext":"mp4","vcodec":"h265","acodec":"aac","width":576,"height":1024,"tbr":1297,"filesize":1728265,"filesize_approx":null},
+        {"format_id":"bytevc1_720p_1504834-0","ext":"mp4","vcodec":"h265","acodec":"aac","width":720,"height":1280,"tbr":1504,"filesize":2004627,"filesize_approx":null},
+        {"format_id":"bytevc1_720p_1504834-1","ext":"mp4","vcodec":"h265","acodec":"aac","width":720,"height":1280,"tbr":1504,"filesize":2004627,"filesize_approx":null}
+    ]"#;
+
+    /// `yt-dlp -J` of x.com/SpaceX/status/1732824684683784516 on 2026-10-30, `hls-*` and `http-*`.
+    const X_HLS: &str = r#"
+        {"format_id":"hls-audio-32000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":32,"filesize":null,"filesize_approx":null},
+        {"format_id":"hls-audio-64000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":64,"filesize":null,"filesize_approx":null},
+        {"format_id":"hls-audio-128000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":128,"filesize":null,"filesize_approx":null},
+        {"format_id":"hls-192","ext":"mp4","vcodec":"avc1.4D4015","acodec":"none","width":480,"height":270,"tbr":192.802,"filesize":null,"filesize_approx":null},
+        {"format_id":"hls-330","ext":"mp4","vcodec":"avc1.4D401E","acodec":"none","width":640,"height":360,"tbr":330.044,"filesize":null,"filesize_approx":null},
+        {"format_id":"hls-767","ext":"mp4","vcodec":"avc1.64001F","acodec":"none","width":1280,"height":720,"tbr":767.92,"filesize":null,"filesize_approx":null},
+        {"format_id":"hls-1460","ext":"mp4","vcodec":"avc1.640032","acodec":"none","width":1920,"height":1080,"tbr":1460.92,"filesize":null,"filesize_approx":null}"#;
+    const X_HTTP: &str = r#"
+        {"format_id":"http-256","ext":"mp4","vcodec":null,"acodec":null,"width":480,"height":270,"tbr":256,"filesize":null,"filesize_approx":3658304},
+        {"format_id":"http-832","ext":"mp4","vcodec":null,"acodec":null,"width":640,"height":360,"tbr":832,"filesize":null,"filesize_approx":11889488},
+        {"format_id":"http-2176","ext":"mp4","vcodec":null,"acodec":null,"width":1280,"height":720,"tbr":2176,"filesize":null,"filesize_approx":31095584},
+        {"format_id":"http-10368","ext":"mp4","vcodec":null,"acodec":null,"width":1920,"height":1080,"tbr":10368,"filesize":null,"filesize_approx":148161312}"#;
+
+    #[test]
+    fn tiktok_keeps_one_format_per_short_side_and_prefers_h264_then_tbr() {
+        assert_eq!(
+            picks(TIKTOK),
+            [
+                (
+                    720,
+                    "bytevc1_720p_1504834-0".into(),
+                    Tier::Free,
+                    Some(2004627)
+                ),
+                (576, "h264_540p_2240963-0".into(), Tier::Free, Some(2953029)),
+            ]
+        );
+    }
+
+    #[test]
+    fn x_takes_null_acodec_as_progressive_and_sells_1080_as_full_hd() {
+        assert_eq!(
+            picks(&format!("[{X_HLS},{X_HTTP}]")),
+            [
+                (1080, "http-10368".into(), Tier::FullHd, Some(148161312)),
+                (720, "http-2176".into(), Tier::Free, Some(31095584)),
+                (360, "http-832".into(), Tier::Free, Some(11889488)),
+                (270, "http-256".into(), Tier::Free, Some(3658304)),
+            ]
+        );
+    }
+
+    #[test]
+    fn dash_only_video_offers_nothing() {
+        assert_eq!(picks(&format!("[{X_HLS}]")), []);
+    }
 }
