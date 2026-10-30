@@ -1,4 +1,4 @@
-import { delay, HttpResponse, http } from "msw";
+import { delay, HttpResponse, http, type JsonBodyType } from "msw";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { facebookInfo, legacyInfo, tiktokInfo, xInfo } from "@/test/fixtures/info";
@@ -6,7 +6,7 @@ import { apiError, INFO_URL, ORDERS_URL, server } from "@/test/handlers";
 
 import { createOrder, downloadUrl, errorCodeSchema, fetchVideoInfo } from "./api";
 
-const answerInfoWith = (body: unknown) => server.use(http.post(INFO_URL, () => HttpResponse.json(body)));
+const answerInfoWith = (body: JsonBodyType) => server.use(http.post(INFO_URL, () => HttpResponse.json(body)));
 
 const fetchParsedInfo = async () => {
   const result = await fetchVideoInfo("https://x.com/SpaceX/status/1732824684683784516");

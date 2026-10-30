@@ -1,6 +1,6 @@
 import { act, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { HttpResponse, http } from "msw";
+import { HttpResponse, http, type JsonBodyType } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ptBr } from "@/i18n/dictionaries/pt-br";
@@ -10,7 +10,7 @@ import { renderPage } from "@/test/render-page";
 
 const errors = ptBr.client.errors;
 
-const recordInfoRequests = (fixture: unknown) => {
+const recordInfoRequests = (fixture: JsonBodyType) => {
   const sentBodies: unknown[] = [];
   server.use(
     http.post(INFO_URL, async ({ request }) => {
