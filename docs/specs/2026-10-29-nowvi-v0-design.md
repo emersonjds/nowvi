@@ -73,9 +73,8 @@ Execução: `yt-dlp -J --no-playlist --flat-playlist --ignore-config --no-plugin
 O ambiente vai limpo (só `PATH` e `HOME=/tmp`), o stdout é limitado a 2 MiB e o stderr a 8 KiB.
 Depois do `-J`, o `webpage_url` passa de novo pelo allowlist.
 
-O `FREE_FORMAT` limita o lado menor do vídeo a 720, então o vertical usa `width<=720` (veja
-`src/video/ytdlp.rs`). O `format_id` e a `ext` resolvidos entram no token. `full_hd_available` =
-o lado menor `>= 1080` em algum formato.
+A escolha dos formatos (a lista `formats`, com um token por qualidade grátis) está em
+`docs/specs/cards/NOWVI-22-formats.md`. O probe roda com `-f b*` e lê o `formats[]` completo.
 
 ### `GET /api/download?token=<token>`
 - `200` faz stream de `yt-dlp -f <format_id> --no-playlist --max-filesize 500M -o - -- <url>` (com
@@ -164,8 +163,6 @@ deploy a partir da `main`.
   volta no NOWVI-13. Roda como usuário não-root e tem healthcheck em `/health`.
 - **`web`:** build `output: "standalone"`, com as `NEXT_PUBLIC_*` como `ARG` e
   `node server.js` como usuário `node`.
-
-O H.264 tem preferência no grátis. Por isso, um TikTok pode sair em 540p H.264 em vez de 720p HEVC.
 
 ## Fora da v0
 
