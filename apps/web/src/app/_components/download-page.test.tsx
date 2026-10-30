@@ -8,6 +8,7 @@ const jsonLdSchema = z.object({
   "@type": z.string(),
   step: z.array(z.object({ text: z.string() })).optional(),
   offers: z.array(z.object({ name: z.string(), price: z.string() })).optional(),
+  mainEntity: z.array(z.object({ acceptedAnswer: z.object({ text: z.string() }) })).optional(),
 });
 
 const structuredData = (type: string) =>
@@ -26,6 +27,19 @@ describe("DownloadPage", () => {
       "/pt-br/baixar-video-tiktok",
       "/pt-br/baixar-video-facebook",
     ]);
+  });
+
+  it("renders every FAQ answer closed, in the markup, matching the FAQPage data", () => {
+    renderPage("pt-br", "tiktok");
+
+    const answers = structuredData("FAQPage")?.mainEntity?.map((question) => question.acceptedAnswer.text) ?? [];
+
+    expect(answers).toHaveLength(4);
+    for (const answer of answers) {
+      const details = screen.getByText(answer).closest("details");
+      expect(details).not.toBeNull();
+      expect(details?.open).toBe(false);
+    }
   });
 
   it("uses the step title as the HowTo text when the step has none", () => {
