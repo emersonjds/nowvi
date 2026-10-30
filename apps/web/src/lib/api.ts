@@ -61,6 +61,7 @@ export type VideoInfo = z.infer<typeof videoInfoSchema>;
 export const errorCodeSchema = z.enum([
   "invalid_url",
   "unsupported_platform",
+  "platform_unavailable",
   "too_long",
   "not_found",
   "rate_limited",
@@ -78,7 +79,9 @@ const errorBodySchema = z.object({ error: errorCodeSchema });
 
 export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   invalid_url: "Esse link não parece válido. Copie o link completo do vídeo, começando com https://.",
-  unsupported_platform: "Por enquanto o Nowvi baixa vídeos do Instagram, TikTok, X e Facebook.",
+  unsupported_platform: "Por enquanto o Nowvi baixa vídeos do TikTok, X e Facebook.",
+  platform_unavailable:
+    "O Instagram está temporariamente indisponível. Por enquanto, o Nowvi baixa vídeos do TikTok, X e Facebook.",
   too_long: "Esse vídeo passa de 15 minutos. Por enquanto, o Nowvi baixa vídeos de até 15 minutos.",
   not_found: "Não achamos esse vídeo. Ele pode ser privado, ter sido apagado ou o post não tem vídeo.",
   rate_limited: "Muitas buscas em pouco tempo. Espere alguns segundos e tente de novo.",

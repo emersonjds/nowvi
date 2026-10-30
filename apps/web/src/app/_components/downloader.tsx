@@ -5,7 +5,6 @@ import { type FormEvent, type ReactNode, useEffect, useReducer, useRef, useState
 import {
   ArrowLeftIcon,
   AtSignIcon,
-  CameraIcon,
   CircleAlertIcon,
   ClipboardPasteIcon,
   DownloadIcon,
@@ -78,7 +77,6 @@ const reducer = (state: State, action: Action): State => {
 };
 
 const PLATFORM_CHIPS = [
-  { label: "Instagram", Icon: CameraIcon },
   { label: "TikTok", Icon: Music2Icon },
   { label: "X", Icon: AtSignIcon },
   { label: "Facebook", Icon: GlobeIcon },

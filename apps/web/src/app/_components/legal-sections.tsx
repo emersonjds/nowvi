@@ -2,7 +2,7 @@ const SECTIONS = [
   {
     id: "termos",
     title: "Termos de Uso",
-    text: "O Nowvi é uma ferramenta para baixar vídeos públicos de Instagram, TikTok, X e Facebook para uso pessoal. Use só para conteúdo próprio ou que você tem autorização para baixar; republicar material de terceiros sem permissão é responsabilidade de quem baixa. O Nowvi não hospeda nem distribui vídeos: cada download é extraído na hora, da fonte pública informada. O Full HD é pago uma vez por vídeo, no Pix. O Nowvi pode recusar ou interromper downloads a qualquer momento. Usar o site é aceitar estes termos e a lei brasileira.",
+    text: "O Nowvi é uma ferramenta para baixar vídeos públicos de TikTok, X e Facebook para uso pessoal. Use só para conteúdo próprio ou que você tem autorização para baixar; republicar material de terceiros sem permissão é responsabilidade de quem baixa. O Nowvi não hospeda nem distribui vídeos: cada download é extraído na hora, da fonte pública informada. O Full HD é pago uma vez por vídeo, no Pix. O Nowvi pode recusar ou interromper downloads a qualquer momento. Usar o site é aceitar estes termos e a lei brasileira.",
   },
   {
     id: "privacidade",

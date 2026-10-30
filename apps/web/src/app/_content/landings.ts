@@ -25,11 +25,11 @@ export const HOME: PageContent = {
   title: APP_CONFIG.meta.title,
   description: APP_CONFIG.meta.description,
   heading: "Baixe vídeos de qualquer rede, num lugar só.",
-  subtitle: "Reels do Instagram, vídeos do TikTok, posts do X e vídeos do Facebook salvos no seu celular em instantes.",
+  subtitle: "Vídeos do TikTok, posts do X e vídeos do Facebook salvos no seu celular em instantes.",
   steps: [
     {
       title: "Copie o link do vídeo",
-      text: "No Instagram, TikTok, X ou Facebook, toque em Compartilhar e depois em Copiar link.",
+      text: "No TikTok, X ou Facebook, toque em Compartilhar e depois em Copiar link.",
     },
     {
       title: "Cole no Nowvi e toque em Baixar",
@@ -56,9 +56,9 @@ export const HOME: PageContent = {
       answer: "Não. O vídeo é extraído e enviado direto para você na hora, e nenhuma cópia fica no servidor.",
     },
     {
-      question: "Como baixar Reels do Instagram?",
+      question: "Como baixar vídeo do TikTok sem marca d'água?",
       answer:
-        'Abra o Reel, toque em Compartilhar e depois em "Copiar link". Cole o link no Nowvi e toque em "Baixar Agora".',
+        'Abra o vídeo, toque em Compartilhar e depois em "Copiar link". Cole o link no Nowvi e o vídeo sai sem o logo do TikTok.',
     },
     {
       question: "Por que alguns vídeos não têm áudio?",
@@ -69,35 +69,6 @@ export const HOME: PageContent = {
 };
 
 export const LANDINGS: Landing[] = [
-  {
-    slug: "baixar-video-instagram",
-    path: "/baixar-video-instagram",
-    network: "Instagram",
-    title: "Baixar Vídeo do Instagram sem Marca d'Água | Nowvi",
-    description:
-      "Baixe Reels, Stories e posts do Instagram em MP4 sem instalar nada. Grátis até 720p; Full HD por R$ 2 no Pix.",
-    heading: "Baixar vídeo do Instagram",
-    subtitle: "Reels, Stories e posts em segundos, direto no navegador, sem cadastro e sem app.",
-    steps: [{ title: "Abra o Reel, Story ou post e toque no avião de papel (Compartilhar)." }, COPY_LINK, PASTE_LINK],
-    faq: [
-      {
-        question: "O Nowvi baixa Reels, Stories e posts?",
-        answer: "Sim. O Nowvi baixa Reels, Stories e posts públicos do Instagram em MP4.",
-      },
-      {
-        question: "Preciso ter conta no Instagram?",
-        answer: "Não. Basta o link público do vídeo, sem login no Instagram nem no Nowvi.",
-      },
-      {
-        question: "Por que vídeo de perfil privado não funciona?",
-        answer: "O Nowvi só acessa conteúdo público. Link de conta privada mostra o aviso de vídeo privado.",
-      },
-      {
-        question: "Em que formato o vídeo sai?",
-        answer: "Sai em MP4 com áudio, que abre em qualquer celular e no WhatsApp.",
-      },
-    ],
-  },
   {
     slug: "baixar-video-tiktok",
     path: "/baixar-video-tiktok",
@@ -157,6 +128,39 @@ export const LANDINGS: Landing[] = [
       {
         question: "Por que o download falha às vezes?",
         answer: "Vídeo apagado, privado ou restrito não fica disponível.",
+      },
+    ],
+  },
+];
+
+// Instagram is paused until NOWVI-20 restores extraction; move it back into LANDINGS then.
+export const PAUSED_LANDINGS: Landing[] = [
+  {
+    slug: "baixar-video-instagram",
+    path: "/baixar-video-instagram",
+    network: "Instagram",
+    title: "Baixar Vídeo do Instagram sem Marca d'Água | Nowvi",
+    description:
+      "Baixe Reels, Stories e posts do Instagram em MP4 sem instalar nada. Grátis até 720p; Full HD por R$ 2 no Pix.",
+    heading: "Baixar vídeo do Instagram",
+    subtitle: "Reels, Stories e posts em segundos, direto no navegador, sem cadastro e sem app.",
+    steps: [{ title: "Abra o Reel, Story ou post e toque no avião de papel (Compartilhar)." }, COPY_LINK, PASTE_LINK],
+    faq: [
+      {
+        question: "O Nowvi baixa Reels, Stories e posts?",
+        answer: "Sim. O Nowvi baixa Reels, Stories e posts públicos do Instagram em MP4.",
+      },
+      {
+        question: "Preciso ter conta no Instagram?",
+        answer: "Não. Basta o link público do vídeo, sem login no Instagram nem no Nowvi.",
+      },
+      {
+        question: "Por que vídeo de perfil privado não funciona?",
+        answer: "O Nowvi só acessa conteúdo público. Link de conta privada mostra o aviso de vídeo privado.",
+      },
+      {
+        question: "Em que formato o vídeo sai?",
+        answer: "Sai em MP4 com áudio, que abre em qualquer celular e no WhatsApp.",
       },
     ],
   },
