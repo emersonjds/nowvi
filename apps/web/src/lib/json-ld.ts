@@ -17,16 +17,16 @@ type JsonLdPage = {
   profiles: string[];
 };
 
-const CONTEXT = "https://schema.org";
+const SCHEMA_ORG = "https://schema.org";
 
-export const serializeJsonLd = (data: object) => JSON.stringify(data).replace(/</g, "\\u003c");
+export const serializeJsonLd = (jsonLd: object) => JSON.stringify(jsonLd).replace(/</g, "\\u003c");
 
 export const pageJsonLd = (page: JsonLdPage) => {
   const organizationId = new URL("/#organization", page.siteUrl).href;
   const publisher = { "@id": organizationId };
   return [
     {
-      "@context": CONTEXT,
+      "@context": SCHEMA_ORG,
       "@type": "Organization",
       "@id": organizationId,
       name: "Nowvi",
@@ -35,7 +35,7 @@ export const pageJsonLd = (page: JsonLdPage) => {
       ...(page.profiles.length > 0 && { sameAs: page.profiles }),
     },
     {
-      "@context": CONTEXT,
+      "@context": SCHEMA_ORG,
       "@type": "WebSite",
       "@id": `${page.homeUrl}#website`,
       name: "Nowvi",
@@ -44,7 +44,7 @@ export const pageJsonLd = (page: JsonLdPage) => {
       publisher,
     },
     {
-      "@context": CONTEXT,
+      "@context": SCHEMA_ORG,
       "@type": "WebApplication",
       name: "Nowvi",
       url: page.url,
@@ -58,7 +58,7 @@ export const pageJsonLd = (page: JsonLdPage) => {
     ...(page.breadcrumbs.length > 0
       ? [
           {
-            "@context": CONTEXT,
+            "@context": SCHEMA_ORG,
             "@type": "BreadcrumbList",
             itemListElement: page.breadcrumbs.map(({ name, url }, index) => ({
               "@type": "ListItem",
@@ -70,7 +70,7 @@ export const pageJsonLd = (page: JsonLdPage) => {
         ]
       : []),
     {
-      "@context": CONTEXT,
+      "@context": SCHEMA_ORG,
       "@type": "FAQPage",
       inLanguage: page.inLanguage,
       mainEntity: page.faq.map(({ question, answer }) => ({
@@ -80,7 +80,7 @@ export const pageJsonLd = (page: JsonLdPage) => {
       })),
     },
     {
-      "@context": CONTEXT,
+      "@context": SCHEMA_ORG,
       "@type": "HowTo",
       name: page.name,
       inLanguage: page.inLanguage,
