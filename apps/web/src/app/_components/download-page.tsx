@@ -25,17 +25,31 @@ export const DownloadPage = ({ locale, page, children }: DownloadPageProps) => {
   const content = pageContent(locale, page);
   const homePath = pagePath(locale, "home");
   const { highlight } = dictionary.home;
+  const homeUrl = new URL(homePath, APP_CONFIG.url).href;
+  const url = new URL(pagePath(locale, page), APP_CONFIG.url).href;
   const jsonLd = pageJsonLd({
-    url: new URL(pagePath(locale, page), APP_CONFIG.url).href,
+    siteUrl: APP_CONFIG.url,
+    homeUrl,
+    url,
     name: content.heading,
     description: content.description,
     inLanguage: LOCALE_INFO[locale].htmlLang,
-    offers: [
-      { name: dictionary.offers.free, price: "0" },
-      ...(dictionary.client.features.fullHdPix ? [{ name: dictionary.offers.fullHd, price: "2.00" }] : []),
-    ],
+    offers: dictionary.client.features.fullHdPix
+      ? [
+          { name: dictionary.offers.free, price: "0", priceCurrency: "BRL" },
+          { name: dictionary.offers.fullHd, price: "2.00", priceCurrency: "BRL" },
+        ]
+      : [{ name: dictionary.offers.free, price: "0" }],
     steps: content.steps,
     faq: content.faq,
+    breadcrumbs:
+      page === "home"
+        ? []
+        : [
+            { name: APP_CONFIG.name, url: homeUrl },
+            { name: dictionary.landings[page].network, url },
+          ],
+    profiles: APP_CONFIG.profiles,
   });
 
   return (
