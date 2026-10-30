@@ -4,3 +4,6 @@ apps/web/.next
 .git
 **/.env*
 !**/.env.example
+**/coverage
+**/*.tsbuildinfo
+**/.vitest
