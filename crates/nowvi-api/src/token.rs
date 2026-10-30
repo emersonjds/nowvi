@@ -14,6 +14,7 @@ pub struct Claims {
     pub u: String,
     pub p: String,
     pub f: String,
+    pub e: String,
     pub nbf: u64,
     pub exp: u64,
 }

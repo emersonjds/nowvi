@@ -8,6 +8,7 @@ use axum::response::{IntoResponse, Response};
 pub enum AppError {
     InvalidUrl,
     UnsupportedPlatform,
+    TooLong,
     NotFound,
     RateLimited { retry_after: u64 },
     ExtractFailed,
@@ -19,12 +20,17 @@ pub enum AppError {
 }
 
 impl AppError {
+    pub fn code(&self) -> &'static str {
+        self.status_and_code().1
+    }
+
     fn status_and_code(&self) -> (StatusCode, &'static str) {
         match self {
             AppError::InvalidUrl => (StatusCode::BAD_REQUEST, "invalid_url"),
             AppError::UnsupportedPlatform => {
                 (StatusCode::UNPROCESSABLE_ENTITY, "unsupported_platform")
             }
+            AppError::TooLong => (StatusCode::UNPROCESSABLE_ENTITY, "too_long"),
             AppError::NotFound => (StatusCode::NOT_FOUND, "not_found"),
             AppError::RateLimited { .. } => (StatusCode::TOO_MANY_REQUESTS, "rate_limited"),
             AppError::ExtractFailed => (StatusCode::BAD_GATEWAY, "extract_failed"),

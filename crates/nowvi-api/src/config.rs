@@ -21,7 +21,7 @@ impl Config {
         if token_secret.len() < 32 {
             return Err("DOWNLOAD_TOKEN_SECRET must have at least 32 bytes".into());
         }
-        let web_origins = var("WEB_ORIGIN")
+        let web_origins: Vec<_> = var("WEB_ORIGIN")
             .unwrap_or_else(|| "http://localhost:3000".into())
             .split(',')
             .map(str::trim)
@@ -32,6 +32,9 @@ impl Config {
                     .map_err(|_| format!("WEB_ORIGIN has an invalid origin: {origin}")),
             })
             .collect::<Result<_, _>>()?;
+        if web_origins.is_empty() {
+            return Err("WEB_ORIGIN must list at least one origin".into());
+        }
         let max_concurrent_jobs = number(var("MAX_CONCURRENT_JOBS"), "MAX_CONCURRENT_JOBS", 6)?;
         if !(1..=1024).contains(&max_concurrent_jobs) {
             return Err("MAX_CONCURRENT_JOBS must be between 1 and 1024".into());

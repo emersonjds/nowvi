@@ -26,12 +26,19 @@ const COMMON_ARGS: [&str; 7] = [
 ];
 
 /// The spec's 720p ladder, capped on the short side: a vertical 720x1280 reel caps on width.
+/// Each step tries H.264 first: HEVC does not play on part of the Androids nor in WhatsApp.
 const FREE_FORMAT: &str = concat!(
+    "best[height<=720][aspect_ratio>=1][ext=mp4][vcodec^=avc][acodec!=none]/",
     "best[height<=720][aspect_ratio>=1][ext=mp4][vcodec!=none][acodec!=none]/",
+    "best[width<=720][aspect_ratio<1][ext=mp4][vcodec^=avc][acodec!=none]/",
     "best[width<=720][aspect_ratio<1][ext=mp4][vcodec!=none][acodec!=none]/",
+    "best[height<=720][aspect_ratio>=1][vcodec^=avc][acodec!=none]/",
     "best[height<=720][aspect_ratio>=1][vcodec!=none][acodec!=none]/",
+    "best[width<=720][aspect_ratio<1][vcodec^=avc][acodec!=none]/",
     "best[width<=720][aspect_ratio<1][vcodec!=none][acodec!=none]/",
+    "best[height<=720][aspect_ratio>=1][vcodec^=avc]/",
     "best[height<=720][aspect_ratio>=1]/",
+    "best[width<=720][aspect_ratio<1][vcodec^=avc]/",
     "best[width<=720][aspect_ratio<1]",
 );
 
@@ -48,6 +55,7 @@ const NOT_FOUND_HINTS: [&str; 5] = [
 #[derive(Debug, Deserialize)]
 pub struct Probe {
     pub format_id: Option<String>,
+    pub ext: Option<String>,
     pub webpage_url: Option<String>,
     pub title: Option<String>,
     pub uploader: Option<String>,

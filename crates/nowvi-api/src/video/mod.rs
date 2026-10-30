@@ -7,8 +7,10 @@ use axum::Json;
 use axum::body::{Body, Bytes};
 use axum::extract::rejection::{JsonRejection, QueryRejection};
 use axum::extract::{Extension, Query, State};
-use axum::http::header::{CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_TYPE};
-use axum::response::{IntoResponse, Response};
+use axum::http::header::{
+    CACHE_CONTROL, CONTENT_DISPOSITION, CONTENT_TYPE, X_CONTENT_TYPE_OPTIONS,
+};
+use axum::response::{IntoResponse, Redirect, Response};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
@@ -27,6 +29,7 @@ use crate::token::{self, Claims};
 const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
 const STREAM_DEADLINE: Duration = Duration::from_secs(10 * 60);
 const EXIT_TIMEOUT: Duration = Duration::from_secs(5);
+const MAX_DURATION_SECONDS: f64 = 15.0 * 60.0;
 
 #[derive(Deserialize)]
 pub struct InfoRequest {
@@ -50,6 +53,8 @@ pub struct Free {
     filesize_bytes: Option<u64>,
     token: String,
     available_at: u64,
+    wait_seconds: u64,
+    expires_in_seconds: u64,
 }
 
 /// A yt-dlp job: one of the client's two and one of the global semaphore.
@@ -89,17 +94,32 @@ pub async fn info(
         tracing::warn!(platform, "yt-dlp resolved a page outside the allowlist");
         return Err(AppError::ExtractFailed);
     }
+    if probe
+        .duration
+        .is_some_and(|seconds| seconds > MAX_DURATION_SECONDS)
+    {
+        return Err(AppError::TooLong);
+    }
     let format_id = probe.format_id.ok_or_else(|| {
         tracing::warn!(platform, "yt-dlp resolved no format");
         AppError::NotFound
     })?;
-    let available_at = token::now() + state.config.ad_wait_seconds;
+    // It names the file and picks the Content-Type; anything odd stays out of the headers.
+    let ext = probe
+        .ext
+        .filter(|ext| {
+            (1..=5).contains(&ext.len()) && ext.bytes().all(|b| b.is_ascii_alphanumeric())
+        })
+        .unwrap_or_else(|| "bin".into());
+    let wait_seconds = state.config.ad_wait_seconds;
+    let available_at = token::now() + wait_seconds;
     let token = token::sign(
         &state.config.token_secret,
         &Claims {
             u: url.to_string(),
             p: platform.into(),
             f: format_id,
+            e: ext,
             nbf: available_at,
             exp: available_at + token::LIFETIME_SECONDS,
         },
@@ -108,7 +128,9 @@ pub async fn info(
         platform,
         title: probe.title.unwrap_or_default(),
         author: probe.uploader.or(probe.channel).or(probe.creator),
-        thumbnail: probe.thumbnail,
+        thumbnail: probe
+            .thumbnail
+            .filter(|thumbnail| thumbnail.starts_with("https://")),
         duration_seconds: probe.duration.map_or(0, |seconds| seconds.round() as u64),
         free: Free {
             height: ytdlp::short_side(probe.width, probe.height).map_or(0, |side| side as u32),
@@ -118,6 +140,8 @@ pub async fn info(
                 .map(|bytes| bytes as u64),
             token,
             available_at,
+            wait_seconds,
+            expires_in_seconds: wait_seconds + token::LIFETIME_SECONDS,
         },
         full_hd_available: probe.formats.iter().any(|format| {
             ytdlp::short_side(format.width, format.height).is_some_and(|side| side >= 1080.0)
@@ -142,16 +166,37 @@ struct Job {
     deadline: Instant,
 }
 
+/// A browser navigation: a failure goes back to the page as `/?erro=<code>`, never as JSON.
 pub async fn download(
     State(state): State<AppState>,
     Extension(client): Extension<ClientIp>,
+    query: Result<Query<DownloadQuery>, QueryRejection>,
+) -> Response {
+    match stream(&state, client, query).await {
+        Ok(response) => response,
+        Err(error) => {
+            let origin = state
+                .config
+                .web_origins
+                .first()
+                .and_then(|origin| origin.to_str().ok())
+                .unwrap_or_default()
+                .trim_end_matches('/');
+            Redirect::to(&format!("{origin}/?erro={}", error.code())).into_response()
+        }
+    }
+}
+
+async fn stream(
+    state: &AppState,
+    client: ClientIp,
     query: Result<Query<DownloadQuery>, QueryRejection>,
 ) -> Result<Response, AppError> {
     let deadline = Instant::now() + STREAM_DEADLINE;
     let Query(query) = query.map_err(|_| AppError::InvalidToken)?;
     let claims = token::verify(&state.config.token_secret, &query.token, token::now())?;
     let url = Url::parse(&claims.u).map_err(|_| AppError::InvalidToken)?;
-    let slot = job_slot(&state, client)?;
+    let slot = job_slot(state, client)?;
     let mut child = ytdlp::stream(&state.config.ytdlp_bin, &url, &claims.p, &claims.f)?;
     let Some(stdout) = child.stdout.take() else {
         return Err(AppError::ExtractFailed);
@@ -176,7 +221,12 @@ pub async fn download(
             return Err(AppError::ExtractFailed);
         }
     };
-    let filename = format!("nowvi-{}-{}.mp4", claims.p, token::now());
+    let filename = format!("nowvi-{}-{}.{}", claims.p, token::now(), claims.e);
+    let content_type = match claims.e.as_str() {
+        "mp4" => "video/mp4",
+        "webm" => "video/webm",
+        _ => "application/octet-stream",
+    };
     let job = Job {
         first: Some(first),
         stdout,
@@ -211,12 +261,13 @@ pub async fn download(
     });
     Ok((
         [
-            (CONTENT_TYPE, "video/mp4".to_string()),
+            (CONTENT_TYPE, content_type.to_string()),
             (
                 CONTENT_DISPOSITION,
                 format!("attachment; filename=\"{filename}\""),
             ),
             (CACHE_CONTROL, "no-store".to_string()),
+            (X_CONTENT_TYPE_OPTIONS, "nosniff".to_string()),
         ],
         Body::from_stream(body),
     )
