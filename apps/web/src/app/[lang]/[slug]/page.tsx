@@ -1,9 +1,7 @@
-import { notFound } from "next/navigation";
-
 import type { Metadata } from "next";
 
 import { LOCALES } from "@/i18n/config";
-import { getDictionary, LANDING_IDS, resolveLocale } from "@/i18n/dictionary";
+import { getDictionary, LANDING_IDS, landingBySlug, resolveLocale } from "@/i18n/dictionary";
 
 import { DownloadPage } from "../../_components/download-page";
 import { pageMetadata } from "../../_content/landings";
@@ -18,8 +16,7 @@ export const generateStaticParams = () =>
 const findLanding = async (params: LandingProps["params"]) => {
   const locale = await resolveLocale(params);
   const { slug } = await params;
-  const page = LANDING_IDS.find((id) => getDictionary(locale).landings[id].slug === slug) ?? notFound();
-  return { locale, page };
+  return { locale, page: landingBySlug(locale, slug) };
 };
 
 export const generateMetadata = async ({ params }: LandingProps): Promise<Metadata> => {
