@@ -9,7 +9,15 @@ use crate::error::AppError;
 
 pub const TIMEOUT: Duration = Duration::from_secs(25);
 
-const FREE_FORMAT: &str = "best[height<=720][ext=mp4][vcodec!=none][acodec!=none]/best[height<=720][vcodec!=none][acodec!=none]/best[height<=720]";
+/// The spec's 720p ladder, capped on the short side: a vertical 720x1280 reel caps on width.
+const FREE_FORMAT: &str = concat!(
+    "best[height<=720][aspect_ratio>=1][ext=mp4][vcodec!=none][acodec!=none]/",
+    "best[width<=720][aspect_ratio<1][ext=mp4][vcodec!=none][acodec!=none]/",
+    "best[height<=720][aspect_ratio>=1][vcodec!=none][acodec!=none]/",
+    "best[width<=720][aspect_ratio<1][vcodec!=none][acodec!=none]/",
+    "best[height<=720][aspect_ratio>=1]/",
+    "best[width<=720][aspect_ratio<1]",
+);
 
 /// What yt-dlp prints on stderr for a private, deleted or video-less post.
 const NOT_FOUND_HINTS: [&str; 5] = [
@@ -30,6 +38,7 @@ pub struct Probe {
     pub creator: Option<String>,
     pub thumbnail: Option<String>,
     pub duration: Option<f64>,
+    pub width: Option<f64>,
     pub height: Option<f64>,
     pub filesize: Option<f64>,
     pub filesize_approx: Option<f64>,
@@ -39,7 +48,16 @@ pub struct Probe {
 
 #[derive(Debug, Deserialize)]
 pub struct Format {
+    pub width: Option<f64>,
     pub height: Option<f64>,
+}
+
+/// The quality a video is sold by: 720p and 1080p name the short side.
+pub fn short_side(width: Option<f64>, height: Option<f64>) -> Option<f64> {
+    match (width, height) {
+        (Some(width), Some(height)) => Some(width.min(height)),
+        _ => height,
+    }
 }
 
 /// `yt-dlp -J` with the free format; dropped on timeout, which kills the child.
@@ -78,7 +96,8 @@ pub async fn probe(bin: &str, url: &str) -> Result<Probe, AppError> {
         let stderr = String::from_utf8_lossy(&output.stderr);
         tracing::warn!(url, status = %output.status, stderr = %stderr.trim(), "yt-dlp probe failed");
         let lower = stderr.to_lowercase();
-        if NOT_FOUND_HINTS.iter().any(|hint| lower.contains(hint)) {
+        let no_free_format = lower.contains("requested format is not available");
+        if !no_free_format && NOT_FOUND_HINTS.iter().any(|hint| lower.contains(hint)) {
             return Err(AppError::NotFound);
         }
         return Err(AppError::ExtractFailed);

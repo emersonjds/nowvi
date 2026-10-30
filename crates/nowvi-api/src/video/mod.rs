@@ -82,7 +82,7 @@ pub async fn info(
         thumbnail: probe.thumbnail,
         duration_seconds: probe.duration.map_or(0, |seconds| seconds.round() as u64),
         free: Free {
-            height: probe.height.map_or(0, |height| height as u32),
+            height: ytdlp::short_side(probe.width, probe.height).map_or(0, |side| side as u32),
             filesize_bytes: probe
                 .filesize
                 .or(probe.filesize_approx)
@@ -90,10 +90,9 @@ pub async fn info(
             token,
             available_at,
         },
-        full_hd_available: probe
-            .formats
-            .iter()
-            .any(|format| format.height.is_some_and(|height| height >= 1080.0)),
+        full_hd_available: probe.formats.iter().any(|format| {
+            ytdlp::short_side(format.width, format.height).is_some_and(|side| side >= 1080.0)
+        }),
     }))
 }
 
@@ -150,13 +149,12 @@ pub async fn download(
         pool: state.pool.clone(),
         platform: claims.p,
     };
-    let body = futures_util::stream::unfold(Some(job), |job| async move {
-        let mut job = job?;
+    let body = futures_util::stream::unfold(job, |mut job| async move {
         if let Some(chunk) = job.first.take() {
-            return Some((Ok(chunk), Some(job)));
+            return Some((Ok(chunk), job));
         }
         match job.stdout.next().await {
-            Some(chunk) => Some((chunk, Some(job))),
+            Some(chunk) => Some((chunk, job)),
             None => {
                 finish(job).await;
                 None
