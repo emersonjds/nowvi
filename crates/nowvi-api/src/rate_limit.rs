@@ -194,4 +194,91 @@ mod tests {
         assert!(limits.check(first_64.0, now).is_err());
         assert!(limits.check(second_64.0, now).is_ok());
     }
+
+    fn address(text: &str) -> IpAddr {
+        text.parse().expect("an IP address")
+    }
+
+    fn headers(pairs: &[(&'static str, &'static str)]) -> HeaderMap {
+        let mut headers = HeaderMap::new();
+        for (name, value) in pairs {
+            headers.append(*name, value.parse().expect("a header value"));
+        }
+        headers
+    }
+
+    #[test]
+    fn x_real_ip_wins_over_the_last_forwarded_for_entry_and_the_peer() {
+        let peer = Some(address("10.0.0.1"));
+        let both = headers(&[
+            ("x-real-ip", "203.0.113.7"),
+            ("x-forwarded-for", "198.51.100.1, 198.51.100.2"),
+        ]);
+        assert_eq!(client_ip(&both, peer).0, address("203.0.113.7"));
+        let forwarded_only = headers(&[
+            ("x-forwarded-for", "198.51.100.1"),
+            ("x-forwarded-for", "6.6.6.6, 198.51.100.2"),
+        ]);
+        assert_eq!(client_ip(&forwarded_only, peer).0, address("198.51.100.2"));
+        let unparseable = headers(&[("x-real-ip", "not-an-ip"), ("x-forwarded-for", "nope")]);
+        assert_eq!(client_ip(&unparseable, peer).0, address("10.0.0.1"));
+        assert_eq!(client_ip(&HeaderMap::new(), None).0, address("::"));
+    }
+
+    #[test]
+    fn ipv6_counts_per_64_and_a_mapped_ipv4_counts_as_ipv4() {
+        assert_eq!(client("2001:db8:1:1:aaaa::1").0, address("2001:db8:1:1::"));
+        assert_eq!(client("::ffff:203.0.113.7").0, address("203.0.113.7"));
+    }
+
+    #[test]
+    fn past_the_burst_a_client_waits_one_refill_for_the_next_request() {
+        let limits = RateLimits::default();
+        let client = address("203.0.113.7");
+        let start = Instant::now();
+        for _ in 0..BURST as usize {
+            limits.check(client, start).expect("within the burst");
+        }
+        assert_eq!(
+            limits.check(client, start),
+            Err(AppError::RateLimited { retry_after: 3 })
+        );
+        assert_eq!(limits.check(client, start + REFILL), Ok(()));
+    }
+
+    #[test]
+    fn prune_drops_the_buckets_idle_for_a_full_refill_and_keeps_the_rest() {
+        let limits = RateLimits::default();
+        let now = Instant::now();
+        let full_refill_ago = now
+            .checked_sub(REFILL.mul_f64(BURST))
+            .expect("the clock runs past 30 s");
+        limits
+            .check(address("203.0.113.1"), full_refill_ago)
+            .expect("a first request");
+        limits
+            .check(address("203.0.113.2"), now)
+            .expect("a first request");
+        limits.prune();
+        let buckets = limits.buckets.lock().expect("an unpoisoned lock");
+        assert_eq!(buckets.len(), 1);
+        assert!(buckets.contains_key(&address("203.0.113.2")));
+    }
+
+    #[test]
+    fn a_full_table_evicts_one_entry_for_a_new_client() {
+        let limits = RateLimits::default();
+        let now = Instant::now();
+        for index in 0..MAX_ENTRIES as u32 {
+            limits
+                .check(IpAddr::from(index.to_be_bytes()), now)
+                .expect("a first request");
+        }
+        limits
+            .check(address("255.255.255.255"), now)
+            .expect("a first request");
+        let buckets = limits.buckets.lock().expect("an unpoisoned lock");
+        assert_eq!(buckets.len(), MAX_ENTRIES);
+        assert!(buckets.contains_key(&address("255.255.255.255")));
+    }
 }

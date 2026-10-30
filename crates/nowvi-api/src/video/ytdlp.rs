@@ -300,48 +300,30 @@ pub fn stream(bin: &str, url: &Url, platform: &str, format_id: &str) -> Result<C
 mod tests {
     use super::*;
 
-    fn picks(rows: &str) -> Vec<(u32, String, Tier, Option<u64>)> {
-        let formats: Vec<Format> = serde_json::from_str(rows).unwrap();
-        pick_formats(&formats)
+    /// `formats[]` of `yt-dlp -J` on 2026-10-30: tiktok.com/@scout2015/video/6718335390845095173,
+    /// x.com/SpaceX/status/1732824684683784516 (`hls-*` and `http-*`) and
+    /// facebook.com/reel/1195289147628387 (progressive `hd`/`sd` with no size, DASH vp9 without
+    /// audio and an m4a track). `probe-dash.json` keeps only Facebook's DASH rows.
+    fn fixture(json: &str) -> Vec<Format> {
+        serde_json::from_str::<Probe>(json).unwrap().formats
+    }
+
+    fn picks(formats: &[Format]) -> Vec<(u32, String, Tier, Option<u64>)> {
+        pick_formats(formats)
             .into_iter()
             .map(|pick| (pick.height, pick.format_id, pick.tier, pick.filesize_bytes))
             .collect()
     }
 
-    /// `yt-dlp -J` of tiktok.com/@scout2015/video/6718335390845095173 on 2026-10-30.
-    const TIKTOK: &str = r#"[
-        {"format_id":"audio","ext":"mp3","vcodec":"none","acodec":"mp3","width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
-        {"format_id":"h264_540p_992286-0","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":992,"filesize":1307586,"filesize_approx":null},
-        {"format_id":"h264_540p_992286-1","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":992,"filesize":1307586,"filesize_approx":null},
-        {"format_id":"h264_540p_1376802-0","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":1376,"filesize":1814281,"filesize_approx":null},
-        {"format_id":"h264_540p_1376802-1","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":1376,"filesize":1814281,"filesize_approx":null},
-        {"format_id":"h264_540p_2240963-0","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":2240,"filesize":2953029,"filesize_approx":null},
-        {"format_id":"h264_540p_2240963-1","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":2240,"filesize":2953029,"filesize_approx":null},
-        {"format_id":"bytevc1_540p_1297374-0","ext":"mp4","vcodec":"h265","acodec":"aac","width":576,"height":1024,"tbr":1297,"filesize":1728265,"filesize_approx":null},
-        {"format_id":"bytevc1_540p_1297374-1","ext":"mp4","vcodec":"h265","acodec":"aac","width":576,"height":1024,"tbr":1297,"filesize":1728265,"filesize_approx":null},
-        {"format_id":"bytevc1_720p_1504834-0","ext":"mp4","vcodec":"h265","acodec":"aac","width":720,"height":1280,"tbr":1504,"filesize":2004627,"filesize_approx":null},
-        {"format_id":"bytevc1_720p_1504834-1","ext":"mp4","vcodec":"h265","acodec":"aac","width":720,"height":1280,"tbr":1504,"filesize":2004627,"filesize_approx":null}
-    ]"#;
-
-    /// `yt-dlp -J` of x.com/SpaceX/status/1732824684683784516 on 2026-10-30, `hls-*` and `http-*`.
-    const X_HLS: &str = r#"
-        {"format_id":"hls-audio-32000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":32,"filesize":null,"filesize_approx":null},
-        {"format_id":"hls-audio-64000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":64,"filesize":null,"filesize_approx":null},
-        {"format_id":"hls-audio-128000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":128,"filesize":null,"filesize_approx":null},
-        {"format_id":"hls-192","ext":"mp4","vcodec":"avc1.4D4015","acodec":"none","width":480,"height":270,"tbr":192.802,"filesize":null,"filesize_approx":null},
-        {"format_id":"hls-330","ext":"mp4","vcodec":"avc1.4D401E","acodec":"none","width":640,"height":360,"tbr":330.044,"filesize":null,"filesize_approx":null},
-        {"format_id":"hls-767","ext":"mp4","vcodec":"avc1.64001F","acodec":"none","width":1280,"height":720,"tbr":767.92,"filesize":null,"filesize_approx":null},
-        {"format_id":"hls-1460","ext":"mp4","vcodec":"avc1.640032","acodec":"none","width":1920,"height":1080,"tbr":1460.92,"filesize":null,"filesize_approx":null}"#;
-    const X_HTTP: &str = r#"
-        {"format_id":"http-256","ext":"mp4","vcodec":null,"acodec":null,"width":480,"height":270,"tbr":256,"filesize":null,"filesize_approx":3658304},
-        {"format_id":"http-832","ext":"mp4","vcodec":null,"acodec":null,"width":640,"height":360,"tbr":832,"filesize":null,"filesize_approx":11889488},
-        {"format_id":"http-2176","ext":"mp4","vcodec":null,"acodec":null,"width":1280,"height":720,"tbr":2176,"filesize":null,"filesize_approx":31095584},
-        {"format_id":"http-10368","ext":"mp4","vcodec":null,"acodec":null,"width":1920,"height":1080,"tbr":10368,"filesize":null,"filesize_approx":148161312}"#;
+    const TIKTOK: &str = include_str!("../../tests/fixtures/probe-tiktok.json");
+    const X: &str = include_str!("../../tests/fixtures/probe-x.json");
+    const FACEBOOK: &str = include_str!("../../tests/fixtures/probe-facebook.json");
+    const DASH: &str = include_str!("../../tests/fixtures/probe-dash.json");
 
     #[test]
     fn tiktok_keeps_one_format_per_short_side_and_prefers_h264_then_tbr() {
         assert_eq!(
-            picks(TIKTOK),
+            picks(&fixture(TIKTOK)),
             [
                 (
                     720,
@@ -357,7 +339,7 @@ mod tests {
     #[test]
     fn x_takes_null_acodec_as_progressive_and_sells_1080_as_full_hd() {
         assert_eq!(
-            picks(&format!("[{X_HLS},{X_HTTP}]")),
+            picks(&fixture(X)),
             [
                 (1080, "http-10368".into(), Tier::FullHd, Some(148161312)),
                 (720, "http-2176".into(), Tier::Free, Some(31095584)),
@@ -367,19 +349,9 @@ mod tests {
         );
     }
 
-    /// `yt-dlp -J` of facebook.com/reel/1195289147628387 on 2026-10-30: progressive `hd`/`sd` with
-    /// no size, DASH vp9 without audio and an m4a track.
-    const FACEBOOK: &str = r#"[
-        {"format_id":"1418122939762069a","ext":"m4a","vcodec":"none","acodec":"mp4a.40.5","width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
-        {"format_id":"sd","ext":"mp4","vcodec":null,"acodec":null,"width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
-        {"format_id":"hd","ext":"mp4","vcodec":null,"acodec":null,"width":null,"height":null,"tbr":null,"filesize":null,"filesize_approx":null},
-        {"format_id":"1417507216490308v","ext":"mp4","vcodec":"vp09.00.21.08.01.01.01.01.00","acodec":"none","width":360,"height":636,"tbr":null,"filesize":null,"filesize_approx":null}
-    ]"#;
-
     #[test]
     fn facebook_offers_its_sizeless_hd_and_sd_as_free() {
-        let formats: Vec<Format> = serde_json::from_str(FACEBOOK).unwrap();
-        let picked: Vec<(String, String, Tier, bool)> = pick_formats(&formats)
+        let picked: Vec<(String, String, Tier, bool)> = pick_formats(&fixture(FACEBOOK))
             .into_iter()
             .map(|pick| (pick.quality, pick.format_id, pick.tier, pick.h264))
             .collect();
@@ -394,6 +366,6 @@ mod tests {
 
     #[test]
     fn dash_only_video_offers_nothing() {
-        assert_eq!(picks(&format!("[{X_HLS}]")), []);
+        assert_eq!(picks(&fixture(DASH)), []);
     }
 }

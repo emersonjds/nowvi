@@ -18,7 +18,10 @@ Spec da v0: `docs/specs/2026-10-29-nowvi-v0-design.md`. Design: `design/` (expor
 - `apps/web`: Next 16 sobre o next-shadcn-admin-dashboard, com npm. Leia `apps/web/AGENTS.md`. Comandos: `npm run dev`,
   `npm run check`, `npx tsc --noEmit`, `npm run test:coverage` e `npm run build`.
 - `crates/nowvi-api`: axum + sqlx + Postgres, que chama o `yt-dlp`, com um slice por feature.
-  Comandos: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` e `cargo build`.
+  Comandos: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`,
+  `scripts/coverage.sh` (cobertura travada em 90%) e `cargo build`. O `cargo test` e o
+  `scripts/coverage.sh` pedem o Postgres na porta 55432 com a senha `nowvi`:
+  `docker run -d --rm --name nowvi-test-pg -e POSTGRES_PASSWORD=nowvi -p 55432:5432 postgres:16-alpine`.
 - O contrato entre os dois é a seção "Contrato da API" da spec. Nunca importe de um app no outro.
 
 ## Fluxo do card
@@ -60,5 +63,6 @@ Toda decisão de produto, UX, arquitetura ou segurança passa por um painel ante
 
 ## Exceção da v0
 
-A v0 saiu sem testes, por pedido do Emerson em 2026-10-29. A web tem testes desde o NOWVI-34 (Vitest, Testing
-Library e MSW contra o contrato, cobertura travada em 90%). A API segue sem testes até o NOWVI-15.
+Encerrada. A v0 saiu sem testes, por pedido do Emerson em 2026-10-29. A web tem testes desde o NOWVI-34
+(Vitest, Testing Library e MSW contra o contrato) e a API desde o NOWVI-15 (o router inteiro com um
+yt-dlp fake e o Postgres de teste). As duas têm cobertura travada em 90%, e toda feature nova sai com TDD.

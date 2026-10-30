@@ -1,0 +1,22 @@
+{
+  "webpage_url": "https://x.com/SpaceX/status/1732824684683784516",
+  "title": "SpaceX - Falcon Heavy launch",
+  "uploader": "SpaceX",
+  "channel": null,
+  "creator": null,
+  "thumbnail": "http://pbs.twimg.com/ext_tw_video_thumb/1732824684683784516/pu/img/thumb.jpg",
+  "duration": 46.866,
+  "formats": [
+    {"format_id":"hls-audio-32000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":32,"filesize":null,"filesize_approx":null},
+    {"format_id":"hls-audio-64000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":64,"filesize":null,"filesize_approx":null},
+    {"format_id":"hls-audio-128000-Audio","ext":"mp4","vcodec":"none","acodec":null,"width":null,"height":null,"tbr":128,"filesize":null,"filesize_approx":null},
+    {"format_id":"hls-192","ext":"mp4","vcodec":"avc1.4D4015","acodec":"none","width":480,"height":270,"tbr":192.802,"filesize":null,"filesize_approx":null},
+    {"format_id":"hls-330","ext":"mp4","vcodec":"avc1.4D401E","acodec":"none","width":640,"height":360,"tbr":330.044,"filesize":null,"filesize_approx":null},
+    {"format_id":"hls-767","ext":"mp4","vcodec":"avc1.64001F","acodec":"none","width":1280,"height":720,"tbr":767.92,"filesize":null,"filesize_approx":null},
+    {"format_id":"hls-1460","ext":"mp4","vcodec":"avc1.640032","acodec":"none","width":1920,"height":1080,"tbr":1460.92,"filesize":null,"filesize_approx":null},
+    {"format_id":"http-256","ext":"mp4","vcodec":null,"acodec":null,"width":480,"height":270,"tbr":256,"filesize":null,"filesize_approx":3658304},
+    {"format_id":"http-832","ext":"mp4","vcodec":null,"acodec":null,"width":640,"height":360,"tbr":832,"filesize":null,"filesize_approx":11889488},
+    {"format_id":"http-2176","ext":"mp4","vcodec":null,"acodec":null,"width":1280,"height":720,"tbr":2176,"filesize":null,"filesize_approx":31095584},
+    {"format_id":"http-10368","ext":"mp4","vcodec":null,"acodec":null,"width":1920,"height":1080,"tbr":10368,"filesize":null,"filesize_approx":148161312}
+  ]
+}

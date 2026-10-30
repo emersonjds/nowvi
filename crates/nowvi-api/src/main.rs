@@ -3,6 +3,10 @@ mod db;
 mod error;
 mod orders;
 mod rate_limit;
+#[cfg(test)]
+mod router_tests;
+#[cfg(test)]
+mod test_support;
 mod token;
 mod video;
 
@@ -52,11 +56,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             prune_limits.prune();
         }
     });
-    let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::list(config.web_origins.clone()))
-        .allow_methods([Method::GET, Method::POST])
-        .allow_headers([CONTENT_TYPE])
-        .expose_headers([header::CONTENT_DISPOSITION]);
     let address = std::net::SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, config.port));
     let state = AppState {
         pool,
@@ -64,15 +63,33 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config: Arc::new(config),
         limits,
     };
-    let api = Router::new()
+    let app = router(state);
+    let listener = tokio::net::TcpListener::bind(address).await?;
+    tracing::info!(%address, "nowvi-api listening");
+    axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
+    )
+    .with_graceful_shutdown(shutdown())
+    .await?;
+    Ok(())
+}
+
+/// Every route with the protections and headers of the spec's "Proteções".
+fn router(state: AppState) -> Router {
+    let cors = CorsLayer::new()
+        .allow_origin(AllowOrigin::list(state.config.web_origins.clone()))
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers([CONTENT_TYPE])
+        .expose_headers([header::CONTENT_DISPOSITION]);
+    Router::new()
         .route("/api/info", post(video::info))
         .route("/api/download", get(video::download))
         .route("/api/orders", post(orders::create))
         .layer(axum::middleware::from_fn_with_state(
             state.clone(),
             rate_limit::limit,
-        ));
-    let app = api
+        ))
         .route("/health", get(|| async { "ok" }))
         .layer(DefaultBodyLimit::max(4 * 1024))
         .layer(cors)
@@ -86,16 +103,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             header::STRICT_TRANSPORT_SECURITY,
             "max-age=31536000",
         ))
-        .with_state(state);
-    let listener = tokio::net::TcpListener::bind(address).await?;
-    tracing::info!(%address, "nowvi-api listening");
-    axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
-    )
-    .with_graceful_shutdown(shutdown())
-    .await?;
-    Ok(())
+        .with_state(state)
 }
 
 /// Set only when the handler did not: the download keeps its own `Cache-Control`.
