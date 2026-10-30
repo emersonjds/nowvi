@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+
+<html class="light" lang="pt-BR"><head><meta charset="utf-8"/><meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport"/><meta content="mobile_tab" name="shell-type"/><link href="https://fonts.googleapis.com" rel="preconnect"/><link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet"/><link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/><style>@layer base { html, body { width: 100vw; margin: 0; padding: 0; min-height: 100vh; } body { overscroll-behavior: none; } .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); } .pt-safe { padding-top: env(safe-area-inset-top, 0px); } main > :first-child { margin-top: 0 !important; } main > :last-child { margin-bottom: 0 !important; } } ::-webkit-scrollbar { display: none; }</style><script src="https://cdn.tailwindcss.com"></script><script id="tailwind-config">tailwind.config = { darkMode: "class", theme: { extend: { colors: { "on-tertiary-fixed-variant": "#2f2ebe", "error": "#ba1a1a", "surface-bright": "#f9f9ff", "surface-tint": "#713dcc", "primary-fixed": "#ebddff", "surface-container": "#e9edff", "on-surface": "#141b2b", "on-secondary-fixed": "#121f00", "surface-container-highest": "#dce2f7", "secondary-container": "#b2f746", "outline": "#7b7485", "surface-container-lowest": "#ffffff", "secondary-fixed": "#b2f746", "on-tertiary-fixed": "#07006c", "on-primary-container": "#c7aaff", "surface": "#f9f9ff", "on-primary-fixed": "#250059", "on-error-container": "#93000a", "outline-variant": "#ccc3d6", "surface-dim": "#d3daef", "background": "#f9f9ff", "surface-variant": "#dce2f7", "error-container": "#ffdad6", "on-error": "#ffffff", "inverse-primary": "#d3bbff", "secondary-fixed-dim": "#98da27", "tertiary-container": "#3231c1", "primary-fixed-dim": "#d3bbff", "primary": "#420093", "surface-container-high": "#e1e8fd", "tertiary-fixed": "#e1e0ff", "on-primary-fixed-variant": "#581db3", "on-tertiary": "#ffffff", "on-background": "#141b2b", "secondary": "#446900", "on-secondary-container": "#496f00", "inverse-surface": "#293040", "on-surface-variant": "#4a4453", "on-primary": "#ffffff", "tertiary": "#1406ac", "tertiary-fixed-dim": "#c0c1ff", "on-secondary-fixed-variant": "#334f00", "on-tertiary-container": "#b0b2ff", "inverse-on-surface": "#edf0ff", "on-secondary": "#ffffff", "primary-container": "#5b21b6", "surface-container-low": "#f1f3ff" }, borderRadius: { "DEFAULT": "0.25rem", "lg": "0.5rem", "xl": "0.75rem", "full": "9999px" }, spacing: { "space-xl": "2rem", "space-lg": "1.5rem", "space-sm": "0.75rem", "space-xs": "0.5rem", "space-md": "1rem", "space-2xs": "0.25rem", "gutter-desktop": "1.5rem", "margin-desktop": "2.5rem", "margin-tablet": "1.5rem", "margin": "1rem", "space-2xl": "3rem", "gutter": "1rem" }, fontFamily: { "display-lg": ["Plus Jakarta Sans"], "body-lg": ["Plus Jakarta Sans"], "label-md": ["Plus Jakarta Sans"], "headline-xl-mobile": ["Plus Jakarta Sans"], "body-xl": ["Plus Jakarta Sans"], "label-lg": ["Plus Jakarta Sans"], "headline-xl": ["Plus Jakarta Sans"], "body-md": ["Plus Jakarta Sans"], "body-sm": ["Plus Jakarta Sans"], "display-lg-mobile": ["Plus Jakarta Sans"], "headline-sm": ["Plus Jakarta Sans"], "headline-lg": ["Plus Jakarta Sans"], "label-sm": ["Plus Jakarta Sans"], "headline-md": ["Plus Jakarta Sans"] }, fontSize: { "display-lg": ["44px", { "lineHeight": "52px", "letterSpacing": "-0.03em", "fontWeight": "800" }], "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }], "label-md": ["14px", { "lineHeight": "18px", "letterSpacing": "0.01em", "fontWeight": "600" }], "headline-xl-mobile": ["26px", { "lineHeight": "32px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-xl": ["18px", { "lineHeight": "28px", "fontWeight": "400" }], "label-lg": ["16px", { "lineHeight": "20px", "letterSpacing": "0.01em", "fontWeight": "700" }], "headline-xl": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }], "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }], "body-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }], "display-lg-mobile": ["32px", { "lineHeight": "38px", "letterSpacing": "-0.025em", "fontWeight": "800" }], "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }], "headline-lg": ["24px", { "lineHeight": "30px", "letterSpacing": "-0.015em", "fontWeight": "700" }], "label-sm": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "600" }], "headline-md": ["20px", { "lineHeight": "26px", "letterSpacing": "-0.01em", "fontWeight": "600" }] } } } }</script><style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head><body class="bg-surface text-on-surface font-body-md text-body-md flex flex-col min-h-screen"><header class="fixed top-0 w-full z-50 pt-safe bg-surface/80 backdrop-blur-xl shadow-[0_1px_8px_rgba(0,0,0,0.04)]"><div class="h-16 px-margin flex items-center justify-between"><div class="flex items-center gap-space-xs"><img alt="Nowvi Logo" class="h-8 w-auto object-contain" src="https://lh3.googleusercontent.com/aida/AEtjO1V0yYXumXgk8NHctz8WjzHJ4D5gJhknQQVeQ40VAvfj-f1Z0bSnccCLLiRRy2bAhQ5xPNZRCsE40xPTKFRd_YvbjsnMAHuGyxw1_5eB-gs71jia4_nzm1a2ujkqhJD7HnpffcX-Jw4lHfst159Kvc1HifJ2LrMR5Cy8aaato2SUTd0pAXIK2uIeBHb1veSlN_ZjN4mI_Hui_hgPT1jLMF0Gy_KaOURPZmNiONSEdvNrEg"/><span class="font-headline-sm text-headline-sm font-bold text-on-surface tracking-tight">Nowvi</span><span class="hidden sm:inline-block font-label-sm text-label-sm px-space-xs py-space-2xs rounded-full bg-surface-container-high text-on-surface-variant font-medium">Baixador</span></div><div class="flex items-center gap-space-xs"><a class="min-h-[44px] min-w-[44px] px-space-xs flex items-center justify-center font-label-md text-label-md text-on-surface-variant hover:text-primary transition-colors" data-path="como-funciona" href="#">Como funciona</a><button aria-label="Alternar modo escuro" class="w-11 h-11 rounded-full flex items-center justify-center text-on-surface-variant hover:text-on-surface hover:bg-surface-container-high transition-colors" type="button"><span class="material-symbols-outlined">dark_mode</span></button><div class="w-8 h-8 rounded-full bg-primary flex items-center justify-center"><span class="material-symbols-outlined text-on-primary text-[18px]">person</span></div></div></div></header><main class="flex-1 flex flex-col relative w-full pt-16 pb-28 bg-surface"><div class="flex flex-col w-full">
+<!-- Interactive Feedback Toasts Container -->
+<div class="fixed top-20 left-1/2 -translate-x-1/2 z-50 w-11/12 max-w-sm pointer-events-none transition-all duration-300" id="toast-region"></div>
+<!-- Hero & Main Downloader Cockpit Section -->
+<section class="px-margin pt-space-md pb-space-lg flex flex-col items-center text-center">
+<!-- Trust Badge Pill -->
+<div class="inline-flex items-center gap-space-2xs bg-surface-container-high px-space-sm py-1 rounded-full mb-space-sm shadow-sm">
+<span class="material-symbols-outlined text-[16px] text-primary" style="font-variation-settings: 'FILL' 1;">bolt</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-semibold">100% Grátis • Sem marca d'água</span>
+</div>
+<!-- Main Headings -->
+<h1 class="font-display-lg-mobile text-display-lg-mobile text-on-surface max-w-md tracking-tight font-extrabold mb-space-xs">
+      Baixe vídeos de qualquer rede, <span class="text-primary-container">num lugar só.</span>
+</h1>
+<p class="font-body-md text-body-md text-on-surface-variant max-w-sm mb-space-lg">
+      TikTok, Reels do Instagram, posts do X e vídeos do Facebook salvos em alta resolução em instantes.
+    </p>
+<!-- Downloader Input Box Container -->
+<div class="w-full max-w-md bg-surface-container-lowest rounded-xl p-space-xs shadow-xl flex flex-col gap-space-xs">
+<div class="relative flex items-center w-full min-h-[56px] bg-surface-container-low rounded-lg px-space-xs">
+<span class="material-symbols-outlined text-outline text-[22px] ml-space-2xs">link</span>
+<input class="w-full h-full bg-transparent px-space-xs text-on-surface font-body-lg text-body-lg placeholder:text-outline focus:outline-none" id="url-input" placeholder="Cole o link do vídeo aqui..." type="url"/>
+<button class="shrink-0 h-9 px-space-sm rounded-full bg-surface-container-highest text-on-surface-variant font-label-sm text-label-sm font-bold flex items-center gap-1 active:scale-95 transition-transform" id="btn-paste" type="button">
+<span class="material-symbols-outlined text-[16px]">content_paste</span>
+<span>Colar</span>
+</button>
+</div>
+<!-- Action Button -->
+<button class="w-full min-h-[50px] bg-secondary-fixed text-on-secondary-fixed font-label-lg text-label-lg rounded-lg flex items-center justify-center gap-space-xs shadow-md active:scale-[0.98] transition-transform" id="btn-download" type="button">
+<span class="material-symbols-outlined text-[20px]" style="font-variation-settings: 'FILL' 1;">download</span>
+<span>Baixar Agora</span>
+</button>
+</div>
+<!-- Supported Platforms Pill Bar -->
+<div class="mt-space-md flex flex-wrap items-center justify-center gap-space-xs">
+<span class="font-label-sm text-label-sm text-outline font-semibold uppercase tracking-wider">Funciona com:</span>
+<div class="inline-flex items-center gap-space-xs bg-surface-container-low px-space-sm py-1.5 rounded-full shadow-sm">
+<span class="flex items-center gap-1 font-label-sm text-label-sm text-on-surface font-medium">
+<span class="material-symbols-outlined text-[16px] text-pink-600">photo_camera</span> Instagram
+        </span>
+<span class="text-outline-variant font-normal">•</span>
+<span class="flex items-center gap-1 font-label-sm text-label-sm text-on-surface font-medium">
+<span class="material-symbols-outlined text-[16px] text-on-surface">music_note</span> TikTok
+        </span>
+<span class="text-outline-variant font-normal">•</span>
+<span class="flex items-center gap-1 font-label-sm text-label-sm text-on-surface font-medium">
+<span class="material-symbols-outlined text-[16px] text-sky-500">flutter</span> X
+        </span>
+<span class="text-outline-variant font-normal">•</span>
+<span class="flex items-center gap-1 font-label-sm text-label-sm text-on-surface font-medium">
+<span class="material-symbols-outlined text-[16px] text-blue-600">public</span> Facebook
+        </span>
+</div>
+</div>
+</section>
+<!-- Interactive Error Simulation Playground -->
+<section class="px-margin mb-space-lg">
+<div class="w-full bg-surface-container-low rounded-xl p-space-md shadow-sm">
+<div class="flex items-center justify-between mb-space-xs">
+<div class="flex items-center gap-space-2xs">
+<span class="material-symbols-outlined text-[18px] text-primary">science</span>
+<h2 class="font-label-md text-label-md text-on-surface font-bold">Simular Respostas &amp; Alertas</h2>
+</div>
+<span class="font-body-sm text-body-sm text-outline">Teste de UX</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant mb-space-sm">
+        Clique para validar a apresentação dos cenários de resposta imediata do aplicativo:
+      </p>
+<div class="grid grid-cols-2 gap-space-xs">
+<button class="p-space-xs rounded-lg bg-surface-container text-left text-on-surface hover:bg-surface-container-high transition-colors active:scale-95" onclick="triggerState('invalid')" type="button">
+<span class="font-label-sm text-label-sm font-semibold flex items-center gap-1 text-error">
+<span class="material-symbols-outlined text-[16px]">link_off</span> Link inválido
+          </span>
+<span class="font-body-sm text-[11px] text-on-surface-variant block mt-0.5">Formato não reconhecido</span>
+</button>
+<button class="p-space-xs rounded-lg bg-surface-container text-left text-on-surface hover:bg-surface-container-high transition-colors active:scale-95" onclick="triggerState('private')" type="button">
+<span class="font-label-sm text-label-sm font-semibold flex items-center gap-1 text-on-surface">
+<span class="material-symbols-outlined text-[16px]">lock</span> Vídeo privado
+          </span>
+<span class="font-body-sm text-[11px] text-on-surface-variant block mt-0.5">Mídia não pública</span>
+</button>
+<button class="p-space-xs rounded-lg bg-surface-container text-left text-on-surface hover:bg-surface-container-high transition-colors active:scale-95" onclick="triggerState('unsupported')" type="button">
+<span class="font-label-sm text-label-sm font-semibold flex items-center gap-1 text-on-tertiary-fixed-variant">
+<span class="material-symbols-outlined text-[16px]">device_unknown</span> Não suportada
+          </span>
+<span class="font-body-sm text-[11px] text-on-surface-variant block mt-0.5">Rede desconhecida</span>
+</button>
+<button class="p-space-xs rounded-lg bg-surface-container text-left text-on-surface hover:bg-surface-container-high transition-colors active:scale-95" onclick="triggerState('adblock')" type="button">
+<span class="font-label-sm text-label-sm font-semibold flex items-center gap-1 text-outline">
+<span class="material-symbols-outlined text-[16px]">shield_with_heart</span> AdBlock ativo
+          </span>
+<span class="font-body-sm text-[11px] text-on-surface-variant block mt-0.5">Aviso de suporte</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Simulated Media Result Card (Populated / Preview State) -->
+<section class="px-margin mb-space-lg" id="media-card">
+<div class="w-full bg-surface-container-lowest rounded-xl p-space-md shadow-lg flex flex-col gap-space-sm">
+<div class="flex items-center justify-between">
+<span class="inline-flex items-center gap-1 px-space-xs py-0.5 rounded-full bg-surface-container text-primary font-label-sm text-label-sm font-bold">
+<span class="material-symbols-outlined text-[14px]">check_circle</span> Pronto para download
+        </span>
+<span class="font-body-sm text-body-sm text-outline">MP4 • 1080p</span>
+</div>
+<div class="flex gap-space-sm items-center">
+<div class="relative w-24 h-24 rounded-lg overflow-hidden shrink-0 bg-surface-container">
+<img class="w-full h-full object-cover" data-alt="Vertical digital video preview of vibrant modern urban aesthetic motion graphics with electric lime accents and rich violet lighting background" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDGvOUFnZW9fbiyuE8m-d1udw17pms-ZZ9owiITW82IDjHA-En65gKO5-od_t_FwLca-Kjp5Gs2Pk6ehpJbAebBywkC7pRd74i8ULkJeuMXRrn6si6TLs6U7Hdqxy5hCzHI-4ojWM3yA4_vs4_--3SXro5mjeIV-5FDA24wH4i_JrBocn7boM4clsD-ZDcwTw8dU4V5cGpIAexhMC7oSNSPhKEo71u3skqiLBunR6_r"/>
+<span class="absolute bottom-1 right-1 bg-inverse-surface/85 text-inverse-on-surface font-label-sm text-[10px] px-1 rounded">00:32</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1 mb-1">
+<span class="material-symbols-outlined text-[14px] text-primary">verified</span>
+<span class="font-label-sm text-label-sm text-on-surface-variant truncate font-semibold">@criador_brasil</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface font-medium line-clamp-2 leading-tight">
+            Descubra como otimizar o fluxo de edição móvel em menos de 1 minuto 🚀
+          </p>
+<span class="font-body-sm text-[11px] text-outline mt-1">Tamanho: 14.8 MB</span>
+</div>
+</div>
+<div class="flex flex-col gap-space-2xs pt-space-xs">
+<button class="w-full min-h-[44px] bg-secondary-fixed text-on-secondary-fixed font-label-md text-label-md rounded-lg flex items-center justify-center gap-space-xs font-bold active:scale-98 transition-transform" type="button">
+<span class="material-symbols-outlined text-[18px]">download_for_offline</span> Baixar em Full HD (Sem Marca)
+        </button>
+<button class="w-full min-h-[40px] bg-surface-container text-on-surface font-label-sm text-label-sm rounded-lg flex items-center justify-center gap-space-xs font-semibold hover:bg-surface-container-high transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">audiotrack</span> Extrair Áudio MP3
+        </button>
+</div>
+</div>
+</section>
+<!-- Clean Fixed 320x100 Ad Slot Container -->
+<section class="px-margin mb-space-xl flex flex-col items-center">
+<div class="w-full max-w-[320px] flex flex-col items-center">
+<div class="w-full flex items-center justify-between pb-1 px-1">
+<span class="font-label-sm text-[10px] uppercase tracking-wider text-outline font-medium">Publicidade</span>
+<span class="material-symbols-outlined text-[12px] text-outline">info</span>
+</div>
+<!-- Fixed 320x100 box to guarantee zero cumulative layout shift -->
+<div class="w-[320px] h-[100px] bg-surface-container-high rounded-lg p-space-xs flex items-center justify-between overflow-hidden shadow-sm">
+<div class="flex items-center gap-space-xs min-w-0 pr-space-2xs">
+<div class="w-16 h-16 rounded-md shrink-0 bg-primary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-primary text-[28px]">cloud_sync</span>
+</div>
+<div class="flex flex-col min-w-0 text-left">
+<span class="font-label-sm text-label-sm font-bold text-on-surface truncate">Armazenamento em Nuvem</span>
+<span class="font-body-sm text-[11px] text-on-surface-variant line-clamp-2">Salve seus arquivos com segurança e alta velocidade.</span>
+</div>
+</div>
+<button class="shrink-0 bg-primary text-on-primary font-label-sm text-[11px] font-bold px-space-xs py-2 rounded-md active:scale-95 transition-transform" type="button">
+          Conhecer
+        </button>
+</div>
+</div>
+</section>
+<!-- How It Works (3 Steps Bento Cards) -->
+<section class="px-margin mb-space-xl">
+<div class="text-center mb-space-md">
+<span class="font-label-sm text-label-sm text-primary font-bold uppercase tracking-wider">Simples • Rápido • Direto</span>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface mt-1">Como funciona o Nowvi</h2>
+</div>
+<div class="flex flex-col gap-space-sm">
+<!-- Step 1 -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm flex items-start gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-lg text-label-lg font-extrabold shadow-sm">
+          1
+        </div>
+<div class="flex flex-col">
+<h3 class="font-label-lg text-label-lg font-bold text-on-surface">Copie o link do vídeo</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-0.5">
+            Abra o Instagram, TikTok, X ou Facebook e copie o link de compartilhamento do reel, post ou status.
+          </p>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm flex items-start gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0 font-label-lg text-label-lg font-extrabold shadow-sm">
+          2
+        </div>
+<div class="flex flex-col">
+<h3 class="font-label-lg text-label-lg font-bold text-on-surface">Cole no Nowvi e toque em Baixar</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-0.5">
+            Use nosso botão inteligente "Colar". Nossos servidores processam o vídeo original em menos de 2 segundos.
+          </p>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="bg-surface-container-low rounded-xl p-space-md shadow-sm flex items-start gap-space-sm">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center shrink-0 font-label-lg text-label-lg font-extrabold shadow-sm">
+          3
+        </div>
+<div class="flex flex-col">
+<h3 class="font-label-lg text-label-lg font-bold text-on-surface">Escolha o formato e salve</h3>
+<p class="font-body-md text-body-md text-on-surface-variant mt-0.5">
+            Faça download do vídeo limpo sem marca d’água em Full HD (1080p) ou extraia o arquivo em áudio MP3.
+          </p>
+</div>
+</div>
+</div>
+</section>
+<!-- FAQ Accordion Section (Portuguese / SEO) -->
+<section class="px-margin mb-space-xl">
+<div class="text-center mb-space-md">
+<span class="font-label-sm text-label-sm text-primary font-bold uppercase tracking-wider">Tire suas dúvidas</span>
+<h2 class="font-headline-lg text-headline-lg font-bold text-on-surface mt-1">Perguntas Frequentes</h2>
+</div>
+<div class="flex flex-col gap-space-xs" id="faq-accordion">
+<!-- FAQ 1 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<button class="w-full p-space-md text-left flex items-center justify-between font-label-md text-label-md text-on-surface font-bold" onclick="toggleFaq(this)" type="button">
+<span>É gratuito baixar vídeos no Nowvi?</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200">expand_more</span>
+</button>
+<div class="px-space-md pb-space-md font-body-md text-body-md text-on-surface-variant hidden">
+          Sim, 100% gratuito e ilimitado. Você pode baixar quantos vídeos precisar sem pagar nada e sem necessidade de criar conta ou fornecer dados cadastrais.
+        </div>
+</div>
+<!-- FAQ 2 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<button class="w-full p-space-md text-left flex items-center justify-between font-label-md text-label-md text-on-surface font-bold" onclick="toggleFaq(this)" type="button">
+<span>Funciona no iPhone e Android?</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200">expand_more</span>
+</button>
+<div class="px-space-md pb-space-md font-body-md text-body-md text-on-surface-variant hidden">
+          Sim! O Nowvi é um aplicativo web progressivo e compatível com navegadores Safari, Chrome, Samsung Internet e Firefox em qualquer celular iOS, Android, tablet ou computador.
+        </div>
+</div>
+<!-- FAQ 3 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<button class="w-full p-space-md text-left flex items-center justify-between font-label-md text-label-md text-on-surface font-bold" onclick="toggleFaq(this)" type="button">
+<span>O Nowvi armazena os vídeos baixados?</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200">expand_more</span>
+</button>
+<div class="px-space-md pb-space-md font-body-md text-body-md text-on-surface-variant hidden">
+          Não. O Nowvi não hospeda nem mantém cópias de vídeos em seus servidores. Toda a extração é efetuada diretamente das fontes públicas sob demanda direta do usuário.
+        </div>
+</div>
+<!-- FAQ 4 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<button class="w-full p-space-md text-left flex items-center justify-between font-label-md text-label-md text-on-surface font-bold" onclick="toggleFaq(this)" type="button">
+<span>Como baixar Reels do Instagram?</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200">expand_more</span>
+</button>
+<div class="px-space-md pb-space-md font-body-md text-body-md text-on-surface-variant hidden">
+          No app do Instagram, abra o Reel desejado, toque no ícone de "Compartilhar" (avião de papel), escolha "Copiar link", acesse o Nowvi, clique em "Colar" e confirme em "Baixar".
+        </div>
+</div>
+<!-- FAQ 5 -->
+<div class="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm">
+<button class="w-full p-space-md text-left flex items-center justify-between font-label-md text-label-md text-on-surface font-bold" onclick="toggleFaq(this)" type="button">
+<span>Por que alguns vídeos não têm áudio?</span>
+<span class="material-symbols-outlined text-outline transition-transform duration-200">expand_more</span>
+</button>
+<div class="px-space-md pb-space-md font-body-md text-body-md text-on-surface-variant hidden">
+          Vídeos sem áudio geralmente utilizam faixas de áudio licenciadas ou restritas regionalmente pela plataforma de origem. No Nowvi, sempre optamos pela stream com faixa de áudio sincronizada de máxima qualidade.
+        </div>
+</div>
+</div>
+</section>
+<!-- Detailed Footer with Legal Navigation Links -->
+<footer class="mt-auto px-margin pt-space-lg pb-space-xl bg-surface-container-low text-center flex flex-col items-center">
+<div class="flex items-center gap-space-2xs mb-space-xs">
+<span class="material-symbols-outlined text-primary text-[20px]">bolt</span>
+<span class="font-headline-sm text-headline-sm font-extrabold text-on-surface tracking-tight">Nowvi</span>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant max-w-xs mb-space-md">
+      A plataforma mais rápida e confiável da América Latina para salvar suas mídias digitais com privacidade.
+    </p>
+<div class="flex flex-wrap justify-center gap-x-space-md gap-y-space-xs font-label-sm text-label-sm text-on-surface-variant font-medium mb-space-md">
+<a class="hover:text-primary transition-colors" href="#">Termos de Uso</a>
+<span class="text-outline-variant">•</span>
+<a class="hover:text-primary transition-colors" href="#">Política de Privacidade</a>
+<span class="text-outline-variant">•</span>
+<a class="hover:text-primary transition-colors" href="#">Remoção de Conteúdo (DMCA)</a>
+<span class="text-outline-variant">•</span>
+<a class="hover:text-primary transition-colors" href="#">Contato</a>
+</div>
+<div class="font-body-sm text-[11px] text-outline">
+      © 2025 Nowvi Inc. Todos os direitos reservados. Não somos afiliados às redes sociais citadas.
+    </div>
+</footer>
+<!-- Cookie Consent Banner (LGPD) -->
+<aside class="fixed bottom-16 left-0 right-0 z-40 p-space-xs px-margin pointer-events-auto" id="lgpd-banner">
+<div class="w-full max-w-md mx-auto bg-inverse-surface text-inverse-on-surface p-space-sm rounded-xl shadow-2xl flex flex-col gap-space-xs sm:flex-row sm:items-center sm:justify-between">
+<div class="flex items-start gap-space-xs">
+<span class="material-symbols-outlined text-secondary-fixed text-[20px] shrink-0 mt-0.5">cookie</span>
+<p class="font-body-sm text-[12px] leading-snug">
+          Usamos cookies para melhorar sua experiência e analisar tráfego (LGPD).
+        </p>
+</div>
+<div class="flex items-center justify-end gap-space-xs shrink-0">
+<button class="px-space-xs py-1.5 rounded-lg text-outline-variant font-label-sm text-[12px] hover:text-inverse-on-surface transition-colors" onclick="closeCookieBanner()" type="button">
+          Configurar
+        </button>
+<button class="px-space-sm py-1.5 rounded-lg bg-secondary-fixed text-on-secondary-fixed font-label-sm text-[12px] font-bold active:scale-95 transition-transform" onclick="closeCookieBanner()" type="button">
+          Aceitar
+        </button>
+</div>
+</div>
+</aside>
+<!-- Interactive Logic Micro-Interactions -->
+<script>
+    // Paste button simulation
+    const btnPaste = document.getElementById('btn-paste');
+    const urlInput = document.getElementById('url-input');
+
+    if (btnPaste && urlInput) {
+      btnPaste.addEventListener('click', async () => {
+        try {
+          if (navigator.clipboard && navigator.clipboard.readText) {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              urlInput.value = text;
+              showToast('Link colado da área de transferência!', 'check_circle', 'text-secondary-fixed-dim');
+              return;
+            }
+          }
+        } catch (e) {
+          // fallback if permission denied
+        }
+        urlInput.value = 'https://www.instagram.com/reel/DC45xK_example/';
+        showToast('Link de exemplo inserido!', 'link', 'text-primary');
+      });
+    }
+
+    // Download button trigger
+    const btnDownload = document.getElementById('btn-download');
+    if (btnDownload) {
+      btnDownload.addEventListener('click', () => {
+        if (!urlInput.value.trim()) {
+          triggerState('invalid');
+        } else {
+          showToast('Processando mídia com alta fidelidade...', 'sync', 'text-primary');
+          document.getElementById('media-card')?.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    }
+
+    // Toast and error trigger simulators
+    function showToast(msg, iconName = 'info', iconColor = 'text-primary') {
+      const toastRegion = document.getElementById('toast-region');
+      if (!toastRegion) return;
+
+      const toast = document.createElement('div');
+      toast.className = 'w-full bg-inverse-surface text-inverse-on-surface p-space-xs px-space-sm rounded-xl shadow-xl flex items-center gap-space-xs transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto mb-space-xs';
+      toast.innerHTML = `
+        <span class="material-symbols-outlined ${iconColor} text-[20px] shrink-0">${iconName}</span>
+        <span class="font-label-sm text-label-sm font-medium flex-1">${msg}</span>
+        <button type="button" class="text-outline-variant hover:text-inverse-on-surface" onclick="this.parentElement.remove()">
+          <span class="material-symbols-outlined text-[16px]">close</span>
+        </button>
+      `;
+
+      toastRegion.appendChild(toast);
+      requestAnimationFrame(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', '-translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+
+    function triggerState(type) {
+      switch (type) {
+        case 'invalid':
+          showToast('URL inválida. Verifique o link copiado e tente novamente.', 'error', 'text-error');
+          break;
+        case 'private':
+          showToast('Este vídeo pertence a uma conta privada ou foi removido.', 'lock', 'text-error');
+          break;
+        case 'unsupported':
+          showToast('Plataforma ainda não suportada pelo extrator do Nowvi.', 'warning', 'text-on-secondary-fixed');
+          break;
+        case 'adblock':
+          showToast('Bloqueador detectado. Considere pausá-lo para apoiar o servidor.', 'shield', 'text-primary-container');
+          break;
+      }
+    }
+
+    // FAQ Accordion Toggle
+    function toggleFaq(button) {
+      const content = button.nextElementSibling;
+      const icon = button.querySelector('.material-symbols-outlined');
+      if (!content || !icon) return;
+
+      const isHidden = content.classList.contains('hidden');
+      if (isHidden) {
+        content.classList.remove('hidden');
+        icon.classList.add('rotate-180');
+      } else {
+        content.classList.add('hidden');
+        icon.classList.remove('rotate-180');
+      }
+    }
+
+    // Cookie Banner close
+    function closeCookieBanner() {
+      const banner = document.getElementById('lgpd-banner');
+      if (banner) {
+        banner.style.opacity = '0';
+        banner.style.transform = 'translateY(20px)';
+        banner.style.transition = 'all 0.3s ease';
+        setTimeout(() => banner.remove(), 300);
+      }
+    }
+  </script>
+</div></main><nav class="fixed bottom-0 w-full z-50 pb-safe bg-surface/85 backdrop-blur-xl shadow-[0_-2px_12px_rgba(0,0,0,0.05)]" data-active-classes="text-primary font-bold"><div class="flex justify-around items-center h-16 px-space-xs"><a aria-current="page" class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] transition-colors text-primary font-bold" data-path="baixador" href="#"><span class="material-symbols-outlined text-[24px]">download</span><span class="font-label-sm text-label-sm">Baixar</span></a><a class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="historico" href="#"><span class="material-symbols-outlined text-[24px]">history</span><span class="font-label-sm text-label-sm">Histórico</span></a><a class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="como-funciona" href="#"><span class="material-symbols-outlined text-[24px]">help_outline</span><span class="font-label-sm text-label-sm">Ajuda</span></a><a class="flex flex-col items-center justify-center min-w-[44px] min-h-[44px] text-on-surface-variant hover:text-on-surface transition-colors" data-path="termos-e-privacidade" href="#"><span class="material-symbols-outlined text-[24px]">policy</span><span class="font-label-sm text-label-sm">Legal</span></a></div></nav></body></html>
