@@ -1,16 +1,10 @@
-import packageJson from "../../package.json";
-
-const currentYear = new Date().getFullYear();
-
 export const APP_CONFIG = {
-  name: "Studio Admin",
-  url: "https://studio-admin.arhamkhnz.com",
-  repository: "https://github.com/arhamkhnz/next-shadcn-admin-dashboard",
-  version: packageJson.version,
-  copyright: `© ${currentYear}, Studio Admin.`,
+  name: "Nowvi",
+  url: process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000",
+  copyright: `© ${new Date().getFullYear()} Nowvi. Não somos afiliados às redes sociais citadas.`,
   meta: {
-    title: "Studio Admin: Open Source shadcn/ui Admin Dashboard",
+    title: "Nowvi: baixe vídeos do Instagram, TikTok, X e Facebook",
     description:
-      "Free, MIT-licensed shadcn/ui admin dashboard with 25+ screens and editions for Radix UI, Base UI, React Aria, and TanStack Start.",
+      "Cole o link e baixe vídeos do Instagram, TikTok, X e Facebook em até 720p grátis, ou em Full HD por R$ 2 no Pix.",
   },
 };
