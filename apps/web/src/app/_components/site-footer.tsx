@@ -17,7 +17,7 @@ export const SiteFooter = () => (
         Nowvi
       </p>
       <p className="text-muted-foreground max-w-md text-sm">
-        O jeito mais rápido de salvar vídeos do Instagram, TikTok, X e Facebook no seu celular.
+        O jeito mais rápido de salvar vídeos do TikTok, X e Facebook no seu celular.
       </p>
       <nav aria-label="Links legais">
         <ul className="flex flex-wrap justify-center gap-x-2">
