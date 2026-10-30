@@ -24,6 +24,7 @@ fi
 echo "$$" > "${format#*:}"
 case "${format%%:*}" in
   complete) printf 'nowvi-video-bytes' ;;
+  partial) printf 'nowvi-video-by'; exit 1 ;;
   flood) exec yes nowvi ;;
   drip) while :; do printf 'x'; sleep 0.2; done ;;
 esac

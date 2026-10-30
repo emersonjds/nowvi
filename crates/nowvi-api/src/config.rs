@@ -59,14 +59,28 @@ fn web_origins(list: &str) -> Result<Vec<HeaderValue>, String> {
         .filter(|origin| !origin.is_empty())
         .map(|origin| match origin {
             "*" => Err("WEB_ORIGIN must list origins, not *".to_string()),
-            _ => HeaderValue::from_str(origin)
-                .map_err(|_| format!("WEB_ORIGIN has an invalid origin: {origin}")),
+            _ => browser_origin(origin)
+                .ok_or_else(|| format!("WEB_ORIGIN has an invalid origin: {origin}")),
         })
         .collect::<Result<_, _>>()?;
     if origins.is_empty() {
         return Err("WEB_ORIGIN must list at least one origin".into());
     }
     Ok(origins)
+}
+
+/// `scheme://host[:port]`, the form a browser sends in `Origin`; a trailing `/` is dropped.
+fn browser_origin(raw: &str) -> Option<HeaderValue> {
+    let url = url::Url::parse(raw).ok()?;
+    let is_bare_origin = matches!(url.scheme(), "http" | "https")
+        && url.host().is_some()
+        && url.path() == "/"
+        && url.query().is_none()
+        && url.fragment().is_none();
+    if !is_bare_origin {
+        return None;
+    }
+    HeaderValue::from_str(&url.origin().ascii_serialization()).ok()
 }
 
 fn number<T: std::str::FromStr>(
@@ -175,6 +189,23 @@ mod tests {
             boot_error(&[("WEB_ORIGIN", "https://nowvi.com.br\u{7f}")]),
             "WEB_ORIGIN has an invalid origin: https://nowvi.com.br\u{7f}"
         );
+    }
+
+    #[test]
+    fn a_web_origin_without_scheme_or_with_a_path_stops_the_boot() {
+        for not_an_origin in [
+            "nowvi.com.br",
+            "ftp://nowvi.com.br",
+            "https://nowvi.com.br/pt-br",
+        ] {
+            assert_eq!(
+                boot_error(&[("WEB_ORIGIN", not_an_origin)]),
+                format!("WEB_ORIGIN has an invalid origin: {not_an_origin}")
+            );
+        }
+        let config =
+            boot(&[("WEB_ORIGIN", "https://nowvi.com.br/")]).expect("a trailing slash boots");
+        assert_eq!(config.web_origins, ["https://nowvi.com.br"]);
     }
 
     #[test]

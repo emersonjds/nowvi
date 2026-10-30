@@ -61,3 +61,22 @@ muda tela ou fluxo.
   todas as páginas, e não no layout. O HTML sai igual e o JSON-LD continua coberto por teste.
 - **Pendente do domínio (SEO-01 e SEO-02):** o `noindex` no host `*.up.railway.app`, o Rich
   Results Test e os debuggers de OG.
+
+## D-3: O `hd` sem tamanho do Facebook (NOWVI-46), 2026-10-30
+
+**Pergunta:** o `hd` do Facebook, que chega sem resolução e pode ser 1080p, sai grátis ou como Full
+HD pago?
+
+**Votos**
+- `qa` e Lagune (F4): pode ser 1080p, então sair grátis tira valor do Full HD.
+- `architect` (sessão principal): o yt-dlp não informa a resolução. Na maioria dos Reels o `hd` é
+  720p, e o Pix ainda está desligado (NOWVI-2). Pôr o `hd` como pago deixaria o Facebook só com o
+  `SD` e um "em breve", o que é pior para quem baixa hoje.
+
+**Vencedor:** o `hd` e o `sd` sem tamanho saem grátis, com rótulo `HD`/`SD` e `height: 0`. A regra
+está documentada no NOWVI-22.
+
+**Trade-off:** um ou outro 1080p do Facebook sai grátis.
+
+**Revisar:** quando o Pix entrar (NOWVI-2) ou quando o yt-dlp passar a informar a resolução. Aí
+vale `quality = "<height>p"` e o tier pela regra normal.
