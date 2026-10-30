@@ -1,4 +1,4 @@
-import { act, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http, type JsonBodyType } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -37,9 +37,9 @@ const searchVideo = async (user: ReturnType<typeof userEvent.setup>, link: strin
   await user.click(screen.getByRole("button", { name: "Baixar Agora" }));
 };
 
-// jsdom cannot navigate; the download anchors only need their click handlers to run.
+// jsdom cannot navigate; the anchors only need their click handlers to run.
 const preventNavigation = (event: MouseEvent) => {
-  if (event.target instanceof Element && event.target.closest("a[download]")) event.preventDefault();
+  if (event.target instanceof Element && event.target.closest("a")) event.preventDefault();
 };
 
 beforeEach(() => {
@@ -50,6 +50,7 @@ afterEach(() => {
   document.removeEventListener("click", preventNavigation);
   window.history.replaceState(null, "", "/");
   vi.useRealTimers();
+  vi.restoreAllMocks();
 });
 
 describe("Downloader", () => {
@@ -189,5 +190,89 @@ describe("Downloader", () => {
 
     expect(screen.getByLabelText("Link do vídeo")).toHaveValue("");
     expect(screen.getByLabelText("Link do vídeo")).toHaveFocus();
+  });
+
+  it("expires the ticket when the free wait starts past expires_in_seconds", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    recordInfoRequests({ ...xInfo, free: { ...xInfo.free, expires_in_seconds: 60 } });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderPage();
+
+    await searchVideo(user, "https://x.com/SpaceX/status/1");
+    await screen.findByRole("button", { name: "Baixar grátis (720p)" });
+    await act(() => vi.advanceTimersByTimeAsync(61_000));
+    await user.click(screen.getByRole("button", { name: "Baixar grátis (720p)" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(errors.expired);
+  });
+
+  it("expires the download link once the token is past its expiry", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    recordInfoRequests({ ...xInfo, free: { ...xInfo.free, expires_in_seconds: 40 } });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    renderPage();
+
+    await searchVideo(user, "https://x.com/SpaceX/status/1");
+    await user.click(await screen.findByRole("button", { name: "Baixar grátis (720p)" }));
+    await act(() => vi.advanceTimersByTimeAsync(41_000));
+    await user.click(screen.getByRole("link", { name: "Baixar agora" }));
+
+    expect(screen.getByRole("alert")).toHaveTextContent(errors.expired);
+  });
+
+  it("closes the Pix sheet opened during the wait and keeps waiting", async () => {
+    recordInfoRequests(xInfo);
+    const user = userEvent.setup();
+    renderPage();
+
+    await searchVideo(user, "https://x.com/SpaceX/status/1");
+    await user.click(await screen.findByRole("button", { name: "Baixar grátis (720p)" }));
+    await user.click(screen.getByRole("button", { name: "Baixar em Full HD por R$ 2,00 no Pix" }));
+    await user.click(await screen.findByRole("button", { name: "Baixar Grátis (720p)" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Liberando seu download…" })).toBeInTheDocument();
+  });
+
+  it("pastes the link from the clipboard", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    await navigator.clipboard.writeText("  https://vm.tiktok.com/ZMabc/  ");
+
+    await user.click(screen.getByRole("button", { name: "Colar" }));
+
+    expect(screen.getByLabelText("Link do vídeo")).toHaveValue("https://vm.tiktok.com/ZMabc/");
+    expect(screen.getByLabelText("Link do vídeo")).toHaveFocus();
+  });
+
+  it("leaves the field to the person when the clipboard is denied", async () => {
+    const user = userEvent.setup();
+    renderPage();
+    vi.spyOn(navigator.clipboard, "readText").mockRejectedValue(new DOMException("denied", "NotAllowedError"));
+
+    await user.click(screen.getByRole("button", { name: "Colar" }));
+
+    expect(screen.getByLabelText("Link do vídeo")).toHaveValue("");
+    expect(screen.getByLabelText("Link do vídeo")).toHaveFocus();
+  });
+
+  it("swaps a broken thumbnail for the film icon", async () => {
+    recordInfoRequests(xInfo);
+    const user = userEvent.setup();
+    renderPage();
+
+    await searchVideo(user, "https://x.com/SpaceX/status/1");
+    fireEvent.error(await screen.findByRole("presentation"));
+
+    expect(screen.queryByRole("presentation")).not.toBeInTheDocument();
+  });
+
+  it("remembers the language picked in the header", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole("link", { name: "English" }));
+
+    expect(document.cookie).toContain("NOWVI_LOCALE=en");
   });
 });
