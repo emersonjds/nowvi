@@ -37,7 +37,19 @@ PR para a `main`. O Railway faz o deploy a partir da `main`.
 | devops | opus | Docker, Railway e CI |
 | qa | opus | revisão adversarial, só leitura |
 | growth | sonnet | pesquisa de mercado, ads e copy (recomendação) |
+| ux | sonnet | crítica de UX e UI, voto no painel e revisão de screenshot |
 | seo | opus | SEO técnico, GEO e conteúdo por idioma em `apps/web`, roadmap em `docs/specs/seo/` |
+
+## Painel de decisão
+
+Toda decisão de produto, UX, arquitetura ou segurança passa por um painel antes do código.
+- Votam, **um por vez** (sem paralelismo, para economizar token): `architect` (dados, performance
+  e arquitetura), `ux` (fluxo, tela e copy), `seo` ou `growth` (busca e mercado) e `qa`
+  (segurança, quando o tema toca nela).
+- Cada voto entra em `docs/specs/decisions.md` como `D-<n>`, com a pergunta, o voto de cada
+  agent, o vencedor, o trade-off e os critérios de aceite.
+- A sessão principal desempata pelo melhor para o usuário final, com performance extrema.
+- Quem implementa não decide UX sozinho: uma dúvida aberta no meio do build volta ao painel.
 
 ## Legibilidade
 
