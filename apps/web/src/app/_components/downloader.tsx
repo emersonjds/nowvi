@@ -76,7 +76,14 @@ const PLATFORM_CHIPS = [
   { label: "Facebook", Icon: GlobeIcon },
 ];
 
-const withScheme = (value: string) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : `https://${value}`);
+const withScheme = (url: string) => (/^[a-z][a-z0-9+.-]*:\/\//i.test(url) ? url : `https://${url}`);
+
+const ticketFor = (video: VideoInfo, format: FreeFormat, receivedAt: number): Ticket => ({
+  video,
+  format,
+  readyAt: receivedAt + video.free.wait_seconds * 1000 + 1000,
+  expiresAt: receivedAt + video.free.expires_in_seconds * 1000,
+});
 
 export const Downloader = ({ hero }: { hero: ReactNode }) => {
   const dictionary = useDictionary();
@@ -119,9 +126,9 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
 
   const submit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const value = url.trim();
-    if (!value) return;
-    const normalized = withScheme(value);
+    const typedUrl = url.trim();
+    if (!typedUrl) return;
+    const normalized = withScheme(typedUrl);
     setUrl(normalized);
     dispatch({ type: "submit" });
     const result = await fetchVideoInfo(normalized);
@@ -129,19 +136,13 @@ export const Downloader = ({ hero }: { hero: ReactNode }) => {
       dispatch({ type: "failed", code: result.code });
       return;
     }
-    const format = result.data.formats.find((item) => item.tier === "free");
-    if (!format) {
+    const video = result.body;
+    const freeFormat = video.formats.find((format) => format.tier === "free");
+    if (!freeFormat) {
       dispatch({ type: "failed", code: "not_found" });
       return;
     }
-    const receivedAt = Date.now();
-    dispatch({
-      type: "loaded",
-      video: result.data,
-      format,
-      readyAt: receivedAt + result.data.free.wait_seconds * 1000 + 1000,
-      expiresAt: receivedAt + result.data.free.expires_in_seconds * 1000,
-    });
+    dispatch({ type: "loaded", ...ticketFor(video, freeFormat, Date.now()) });
   };
 
   const reset = () => {
