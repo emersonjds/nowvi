@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, within } from "@testing-library/react";
+import { act, fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HttpResponse, http, type JsonBodyType } from "msw";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -241,8 +241,7 @@ describe("Downloader", () => {
 
     await user.click(screen.getByRole("button", { name: "Colar" }));
 
-    expect(screen.getByLabelText("Link do vídeo")).toHaveValue("https://vm.tiktok.com/ZMabc/");
-    expect(screen.getByLabelText("Link do vídeo")).toHaveFocus();
+    expect(await screen.findByDisplayValue("https://vm.tiktok.com/ZMabc/")).toHaveFocus();
   });
 
   it("leaves the field to the person when the clipboard is denied", async () => {
@@ -252,8 +251,8 @@ describe("Downloader", () => {
 
     await user.click(screen.getByRole("button", { name: "Colar" }));
 
+    await waitFor(() => expect(screen.getByLabelText("Link do vídeo")).toHaveFocus());
     expect(screen.getByLabelText("Link do vídeo")).toHaveValue("");
-    expect(screen.getByLabelText("Link do vídeo")).toHaveFocus();
   });
 
   it("swaps a broken thumbnail for the film icon", async () => {
