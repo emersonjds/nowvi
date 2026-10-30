@@ -39,6 +39,8 @@ const nextConfig = (phase) => {
       removeConsole: process.env.NODE_ENV === "production",
     },
     headers: async () => [{ source: "/:path*", headers: securityHeaders }],
+    // Temporary while Instagram is paused (NOWVI-20); drop it when the landing comes back.
+    redirects: async () => [{ source: "/baixar-video-instagram", destination: "/", statusCode: 302 }],
   };
 };
 
