@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 
 import { APP_CONFIG } from "@/config/app-config";
-import type { Locale } from "@/i18n/config";
+import { LOCALE_INFO, type Locale } from "@/i18n/config";
 import { getDictionary, LANDING_IDS, type PageKey, pageContent, pagePath } from "@/i18n/dictionary";
 import { pageJsonLd, serializeJsonLd } from "@/lib/json-ld";
 
@@ -29,6 +29,11 @@ export const DownloadPage = ({ locale, page, children }: DownloadPageProps) => {
     url: new URL(pagePath(locale, page), APP_CONFIG.url).href,
     name: content.heading,
     description: content.description,
+    inLanguage: LOCALE_INFO[locale].htmlLang,
+    offers: [
+      { name: dictionary.offers.free, price: "0" },
+      ...(dictionary.client.features.fullHdPix ? [{ name: dictionary.offers.fullHd, price: "2.00" }] : []),
+    ],
     steps: content.steps,
     faq: content.faq,
   });

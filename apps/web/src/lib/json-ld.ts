@@ -1,11 +1,20 @@
 type Step = { title: string; text?: string };
 type Question = { question: string; answer: string };
+type Offer = { name: string; price: string };
 
-type JsonLdPage = { url: string; name: string; description: string; steps: Step[]; faq: Question[] };
+type JsonLdPage = {
+  url: string;
+  name: string;
+  description: string;
+  inLanguage: string;
+  offers: Offer[];
+  steps: Step[];
+  faq: Question[];
+};
 
 export const serializeJsonLd = (data: object) => JSON.stringify(data).replace(/</g, "\\u003c");
 
-export const pageJsonLd = ({ url, name, description, steps, faq }: JsonLdPage) => [
+export const pageJsonLd = ({ url, name, description, inLanguage, offers, steps, faq }: JsonLdPage) => [
   {
     "@context": "https://schema.org",
     "@type": "WebApplication",
@@ -14,16 +23,13 @@ export const pageJsonLd = ({ url, name, description, steps, faq }: JsonLdPage) =
     description,
     applicationCategory: "MultimediaApplication",
     operatingSystem: "Any",
-    inLanguage: "pt-BR",
-    offers: [
-      { "@type": "Offer", name: "Grátis até 720p", price: "0", priceCurrency: "BRL" },
-      { "@type": "Offer", name: "Full HD 1080p", price: "2.00", priceCurrency: "BRL" },
-    ],
+    inLanguage,
+    offers: offers.map((offer) => ({ "@type": "Offer", ...offer, priceCurrency: "BRL" })),
   },
   {
     "@context": "https://schema.org",
     "@type": "FAQPage",
-    inLanguage: "pt-BR",
+    inLanguage,
     mainEntity: faq.map(({ question, answer }) => ({
       "@type": "Question",
       name: question,
@@ -34,7 +40,7 @@ export const pageJsonLd = ({ url, name, description, steps, faq }: JsonLdPage) =
     "@context": "https://schema.org",
     "@type": "HowTo",
     name,
-    inLanguage: "pt-BR",
+    inLanguage,
     step: steps.map(({ title, text }, index) => ({
       "@type": "HowToStep",
       position: index + 1,

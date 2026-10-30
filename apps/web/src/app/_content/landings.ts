@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 
 import { APP_CONFIG } from "@/config/app-config";
-import type { Locale } from "@/i18n/config";
-import { type PageKey, pageContent, pagePath } from "@/i18n/dictionary";
+import { LOCALE_INFO, type Locale } from "@/i18n/config";
+import { languageAlternates, type PageKey, pageContent, pagePath } from "@/i18n/dictionary";
 
 export type Step = { title: string; text?: string };
 export type Question = { question: string; answer: string };
@@ -16,11 +16,11 @@ export const pageMetadata = (locale: Locale, page: PageKey): Metadata => {
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: path, languages: languageAlternates(page) },
     openGraph: {
       type: "website",
       siteName: APP_CONFIG.name,
-      locale: "pt_BR",
+      locale: LOCALE_INFO[locale].ogLocale,
       url: path,
       title,
       description,

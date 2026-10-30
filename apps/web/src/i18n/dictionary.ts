@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 
-import { isLocale, type Locale } from "./config";
+import { isLocale, LOCALE_INFO, LOCALES, type Locale } from "./config";
 import { en } from "./dictionaries/en";
 import { es } from "./dictionaries/es";
 import { id } from "./dictionaries/id";
@@ -28,3 +28,8 @@ export const pageContent = (locale: Locale, page: PageKey) =>
 
 export const pagePath = (locale: Locale, page: PageKey) =>
   page === "home" ? `/${locale}` : `/${locale}/${DICTIONARIES[locale].landings[page].slug}`;
+
+export const languageAlternates = (page: PageKey) => ({
+  ...Object.fromEntries(LOCALES.map((locale) => [LOCALE_INFO[locale].htmlLang, pagePath(locale, page)])),
+  "x-default": pagePath("en", page),
+});
