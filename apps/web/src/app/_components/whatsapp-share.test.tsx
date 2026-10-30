@@ -50,13 +50,16 @@ const stubPhone = ({
 
 const renderPanel = (fixture: unknown, quality: string, phase: "ready" | "waiting" = "ready") => {
   const video = videoInfoSchema.parse(fixture);
-  const format = video.formats.find((candidate) => candidate.quality === quality);
-  if (format?.tier !== "free") throw new Error(`no free ${quality} in the fixture`);
+  const freeFormat = (wanted: string) => {
+    const format = video.formats.find((candidate) => candidate.quality === wanted);
+    if (format?.tier !== "free") throw new Error(`no free ${wanted} in the fixture`);
+    return format;
+  };
   const unlockedAt = phase === "ready" ? Date.now() - 1_000 : Date.now() + 30_000;
-  render(
+  const panel = (wanted: string) => (
     <DictionaryProvider value={ptBr.client}>
       <WaitingPanel
-        format={format}
+        format={freeFormat(wanted)}
         formats={video.formats}
         startedAt={Date.now() - 1_000}
         readyAt={unlockedAt}
@@ -65,8 +68,10 @@ const renderPanel = (fixture: unknown, quality: string, phase: "ready" | "waitin
         onNewVideo={vi.fn()}
         onOtherQuality={vi.fn()}
       />
-    </DictionaryProvider>,
+    </DictionaryProvider>
   );
+  const { rerender } = render(panel(quality));
+  return { choose: (wanted: string) => rerender(panel(wanted)) };
 };
 
 const share = ptBr.client.waiting.share;
@@ -136,6 +141,56 @@ describe("WhatsApp share", () => {
     await user.click(await screen.findByRole("button", { name: "Preparar 576p para WhatsApp" }));
 
     expect(screen.getByRole("button", { name: share.preparing })).toBeDisabled();
+  });
+
+  it("cancels the prefetch when Baixar agora is tapped while preparing, so one download stays alive", async () => {
+    const abortedTokens: (string | null)[] = [];
+    const requestedTokens = recordDownloads();
+    server.use(
+      http.get(DOWNLOAD_URL, async ({ request }) => {
+        requestedTokens.push(new URL(request.url).searchParams.get("token"));
+        request.signal.addEventListener("abort", () =>
+          abortedTokens.push(new URL(request.url).searchParams.get("token")),
+        );
+        await delay("infinite");
+        return videoResponse();
+      }),
+    );
+    stubPhone();
+    const user = userEvent.setup();
+    renderPanel(xInfo, "720p");
+
+    await screen.findByRole("button", { name: share.preparing });
+    await user.click(screen.getByRole("link", { name: "Baixar agora" }));
+
+    expect(await screen.findByRole("button", { name: "Preparar 720p para WhatsApp" })).toBeEnabled();
+    expect(requestedTokens).toEqual(["x-720-token"]);
+    await vi.waitFor(() => expect(abortedTokens).toEqual(["x-720-token"]));
+    expect(screen.getByRole("link", { name: "Baixar de novo" })).toHaveAttribute(
+      "href",
+      "https://api.nowvi.test/api/download?token=x-720-token",
+    );
+  });
+
+  it("drops the prepared file when the chosen quality changes", async () => {
+    let calls = 0;
+    recordDownloads(async () => {
+      calls += 1;
+      if (calls > 1) await delay("infinite");
+      return videoResponse();
+    });
+    stubPhone();
+    const view = renderPanel(xInfo, "720p");
+    await screen.findByRole("button", { name: share.send });
+
+    view.choose("360p");
+    view.choose("720p");
+
+    expect(await screen.findByRole("button", { name: share.preparing })).toBeDisabled();
+    expect(screen.getByRole("link", { name: "Baixar agora" })).toHaveAttribute(
+      "href",
+      "https://api.nowvi.test/api/download?token=x-720-token",
+    );
   });
 
   it("shares the page link through wa.me on a computer", async () => {
