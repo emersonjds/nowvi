@@ -8,7 +8,7 @@ type LanguageMenuProps = { locale: Locale; label: string; links: { locale: Local
 
 const remember = (locale: Locale) => {
   // biome-ignore lint/suspicious/noDocumentCookie: the proxy reads this cookie; Cookie Store API is missing in older Safari
-  document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax`;
+  document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=31536000; samesite=lax${location.protocol === "https:" ? "; secure" : ""}`;
 };
 
 export const LanguageMenu = ({ locale, label, links }: LanguageMenuProps) => (
