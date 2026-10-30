@@ -48,3 +48,11 @@ O token ganha a claim `"q": "<height>p"`. O `downloads.quality` grava esse valor
   o link "Baixar em outra qualidade", que volta para a lista sem refazer o `/api/info`, desde que
   o token não tenha expirado.
 - Rótulo "HD" a partir de 720 e "Full HD" a partir de 1080.
+
+## Formato sem tamanho (D-3, 2026-10-30)
+Quando a rede não informa largura e altura, o formato entra se for um mp4 progressivo. É o caso
+do `hd` e do `sd` do Facebook.
+- Ele vai como `tier: "free"`, com `height: 0` e `quality` igual ao nome que o extractor dá ao
+  formato, em maiúsculas (`"HD"` ou `"SD"`). O `hd` vem antes do `sd`.
+- O `downloads.quality` grava esse mesmo rótulo.
+- A web mostra o rótulo como está, sem `p`.

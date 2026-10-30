@@ -1,0 +1,8 @@
+{
+  "webpage_url": "https://evil.example/video/1",
+  "title": "Redirected",
+  "duration": 10,
+  "formats": [
+    {"format_id":"h264_540p_2240963-0","ext":"mp4","vcodec":"h264","acodec":"aac","width":576,"height":1024,"tbr":2240,"filesize":2953029,"filesize_approx":null}
+  ]
+}

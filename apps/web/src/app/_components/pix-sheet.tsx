@@ -7,7 +7,8 @@ import { CirclePlayIcon, ShieldCheckIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
-import { createOrder, ERROR_MESSAGES, type ErrorCode, type VideoInfo } from "@/lib/api";
+import { useDictionary } from "@/i18n/client";
+import { createOrder, type ErrorCode, type VideoInfo } from "@/lib/api";
 
 import { VideoCard } from "./video-card";
 
@@ -20,15 +21,17 @@ type PixSheetProps = {
 };
 
 export const PixSheet = ({ open, onOpenChange, url, video, onFree }: PixSheetProps) => {
-  const [result, setResult] = useState<ErrorCode | "loading">("loading");
-  const requested = useRef(false);
+  const dictionary = useDictionary();
+  const copy = dictionary.pix;
+  const [orderStatus, setOrderStatus] = useState<ErrorCode | "loading">("loading");
+  const orderRequested = useRef(false);
 
-  // The downloader keys this sheet by token, so the order is created once per token.
+  // One order per token: the downloader keys this sheet by the free token.
   useEffect(() => {
-    if (!open || requested.current) return;
-    requested.current = true;
+    if (!open || orderRequested.current) return;
+    orderRequested.current = true;
     // ponytail: no QR flow until NOWVI-2, so any accepted order still reads as "coming soon".
-    void createOrder(url).then((response) => setResult(response.ok ? "payments_disabled" : response.code));
+    void createOrder(url).then((order) => setOrderStatus(order.ok ? "payments_disabled" : order.code));
   }, [open, url]);
 
   return (
@@ -39,24 +42,24 @@ export const PixSheet = ({ open, onOpenChange, url, video, onFree }: PixSheetPro
         className="mx-auto max-h-[90dvh] max-w-xl overflow-y-auto rounded-t-3xl"
       >
         <SheetHeader className="px-4 pt-5 pb-0">
-          <SheetTitle className="text-xl font-bold">Full HD 1080p com Pix</SheetTitle>
+          <SheetTitle className="text-xl font-bold">{copy.title}</SheetTitle>
           <SheetDescription className="flex items-center gap-2">
             <ShieldCheckIcon className="text-primary size-4" aria-hidden />
-            Cobrança única de R$ 2,00, sem assinatura.
+            {copy.description}
           </SheetDescription>
         </SheetHeader>
 
         <div className="flex flex-col gap-4 px-4">
-          <VideoCard video={video} detail="Full HD 1080p" />
+          <VideoCard video={video} detail={copy.detail} />
           <div className="bg-muted flex flex-col items-center gap-1 rounded-2xl p-4">
-            <p className="text-muted-foreground text-sm">Total a pagar</p>
+            <p className="text-muted-foreground text-sm">{copy.total}</p>
             <p className="text-primary text-3xl font-extrabold">R$ 2,00</p>
           </div>
           <div aria-live="polite">
-            {result === "loading" ? (
+            {orderStatus === "loading" ? (
               <Skeleton className="h-16 w-full rounded-xl" />
             ) : (
-              <p className="bg-secondary rounded-xl p-4 text-center font-medium">{ERROR_MESSAGES[result]}</p>
+              <p className="bg-secondary rounded-xl p-4 text-center font-medium">{dictionary.errors[orderStatus]}</p>
             )}
           </div>
         </div>
@@ -67,11 +70,11 @@ export const PixSheet = ({ open, onOpenChange, url, video, onFree }: PixSheetPro
             onClick={onFree}
           >
             <CirclePlayIcon className="size-5" aria-hidden />
-            Baixar Grátis (720p)
+            {copy.free}
           </Button>
           <SheetClose asChild>
             <Button variant="ghost" className="h-11">
-              Fechar
+              {copy.close}
             </Button>
           </SheetClose>
         </div>

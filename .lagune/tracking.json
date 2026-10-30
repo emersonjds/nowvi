@@ -1,0 +1,98 @@
+{
+  "name": "lagune",
+  "entries": [
+    {
+      "name": "Download slot held by a client that stops reading",
+      "paths": [
+        "crates/nowvi-api/src/video/mod.rs",
+        "crates/nowvi-api/src/rate_limit.rs"
+      ]
+    },
+    {
+      "name": "Reusable download token",
+      "paths": [
+        "crates/nowvi-api/src/token.rs",
+        "crates/nowvi-api/src/video/mod.rs",
+        "crates/nowvi-api/migrations"
+      ]
+    },
+    {
+      "name": "Client IP trusted from forwarding headers",
+      "paths": [
+        "crates/nowvi-api/src/rate_limit.rs",
+        "docs/specs/2026-10-29-nowvi-v0-design.md"
+      ]
+    },
+    {
+      "name": "Facebook HD format offered as free",
+      "paths": [
+        "crates/nowvi-api/src/video/ytdlp.rs",
+        "docs/specs/cards/NOWVI-22-formats.md"
+      ]
+    },
+    {
+      "name": "Rate-limited download answers in JSON",
+      "paths": [
+        "crates/nowvi-api/src/rate_limit.rs",
+        "crates/nowvi-api/src/video/mod.rs"
+      ]
+    },
+    {
+      "name": "API responses without browser security headers",
+      "paths": [
+        "crates/nowvi-api/src/main.rs",
+        "crates/nowvi-api/Cargo.toml"
+      ]
+    },
+    {
+      "name": "Web CSP allows inline scripts and any https frame",
+      "paths": [
+        "apps/web/next.config.mjs",
+        "apps/web/src/app/_components/ad-slot.tsx"
+      ]
+    },
+    {
+      "name": "HSTS missing on web and API",
+      "paths": [
+        "apps/web/next.config.mjs",
+        "crates/nowvi-api/src/main.rs"
+      ]
+    },
+    {
+      "name": "Ad consent cannot be withdrawn",
+      "paths": [
+        "apps/web/src/app/_components/cookie-banner.tsx",
+        "apps/web/src/app/_components/site-footer.tsx",
+        "apps/web/src/app/_components/legal-sections.tsx"
+      ]
+    },
+    {
+      "name": "Vulnerable shadcn CLI in production dependencies",
+      "paths": [
+        "apps/web/package.json",
+        "apps/web/package-lock.json"
+      ]
+    },
+    {
+      "name": "Container base images on mutable tags",
+      "paths": [
+        "crates/nowvi-api/Dockerfile",
+        "apps/web/Dockerfile"
+      ]
+    },
+    {
+      "name": "Railway config files not applied",
+      "paths": [
+        "apps/web/railway.toml",
+        "crates/nowvi-api/railway.toml",
+        "README.md"
+      ]
+    },
+    {
+      "name": "Docker build context lets local env files in",
+      "paths": [
+        ".dockerignore"
+      ]
+    }
+  ]
+}

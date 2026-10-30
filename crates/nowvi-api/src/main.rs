@@ -3,6 +3,10 @@ mod db;
 mod error;
 mod orders;
 mod rate_limit;
+#[cfg(test)]
+mod router_tests;
+#[cfg(test)]
+mod test_support;
 mod token;
 mod video;
 
@@ -12,11 +16,12 @@ use std::time::Duration;
 use axum::Router;
 use axum::extract::DefaultBodyLimit;
 use axum::http::Method;
-use axum::http::header::CONTENT_TYPE;
+use axum::http::header::{self, CONTENT_TYPE};
 use axum::routing::{get, post};
 use sqlx::PgPool;
 use tokio::sync::Semaphore;
 use tower_http::cors::{AllowOrigin, CorsLayer};
+use tower_http::set_header::SetResponseHeaderLayer;
 
 #[derive(Clone)]
 pub struct AppState {
@@ -43,18 +48,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let pool = db::connect(&config.database_url).await?;
     let limits = Arc::new(rate_limit::RateLimits::default());
-    let prune_limits = limits.clone();
-    tokio::spawn(async move {
-        let mut every_minute = tokio::time::interval(Duration::from_secs(60));
-        loop {
-            every_minute.tick().await;
-            prune_limits.prune();
-        }
-    });
-    let cors = CorsLayer::new()
-        .allow_origin(AllowOrigin::list(config.web_origins.clone()))
-        .allow_methods([Method::GET, Method::POST])
-        .allow_headers([CONTENT_TYPE]);
+    tokio::spawn(prune_every_minute(limits.clone()));
     let address = std::net::SocketAddr::from((std::net::Ipv6Addr::UNSPECIFIED, config.port));
     let state = AppState {
         pool,
@@ -62,19 +56,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         config: Arc::new(config),
         limits,
     };
-    let api = Router::new()
-        .route("/api/info", post(video::info))
-        .route("/api/download", get(video::download))
-        .route("/api/orders", post(orders::create))
-        .layer(axum::middleware::from_fn_with_state(
-            state.clone(),
-            rate_limit::limit,
-        ));
-    let app = api
-        .route("/health", get(|| async { "ok" }))
-        .layer(DefaultBodyLimit::max(4 * 1024))
-        .layer(cors)
-        .with_state(state);
+    let app = router(state);
     let listener = tokio::net::TcpListener::bind(address).await?;
     tracing::info!(%address, "nowvi-api listening");
     axum::serve(
@@ -84,6 +66,53 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     .with_graceful_shutdown(shutdown())
     .await?;
     Ok(())
+}
+
+async fn prune_every_minute(limits: Arc<rate_limit::RateLimits>) {
+    let mut every_minute = tokio::time::interval(Duration::from_secs(60));
+    loop {
+        every_minute.tick().await;
+        limits.prune();
+    }
+}
+
+/// Every route with the protections and headers of the spec's "Proteções".
+fn router(state: AppState) -> Router {
+    let cors = CorsLayer::new()
+        .allow_origin(AllowOrigin::list(state.config.web_origins.clone()))
+        .allow_methods([Method::GET, Method::POST])
+        .allow_headers([CONTENT_TYPE])
+        .expose_headers([header::CONTENT_DISPOSITION]);
+    Router::new()
+        .route("/api/info", post(video::info))
+        .route("/api/download", get(video::download))
+        .route("/api/orders", post(orders::create))
+        .layer(axum::middleware::from_fn_with_state(
+            state.clone(),
+            rate_limit::limit,
+        ))
+        .route("/health", get(|| async { "ok" }))
+        .layer(DefaultBodyLimit::max(4 * 1024))
+        .layer(cors)
+        .layer(security_header(header::X_CONTENT_TYPE_OPTIONS, "nosniff"))
+        .layer(security_header(header::CACHE_CONTROL, "no-store"))
+        .layer(security_header(
+            header::CONTENT_SECURITY_POLICY,
+            "default-src 'none'; frame-ancestors 'none'",
+        ))
+        .layer(security_header(
+            header::STRICT_TRANSPORT_SECURITY,
+            "max-age=31536000",
+        ))
+        .with_state(state)
+}
+
+/// Set only when the handler did not: the download keeps its own `Cache-Control`.
+fn security_header(
+    name: header::HeaderName,
+    value: &'static str,
+) -> SetResponseHeaderLayer<header::HeaderValue> {
+    SetResponseHeaderLayer::if_not_present(name, header::HeaderValue::from_static(value))
 }
 
 /// SIGTERM (Railway, tini) or ctrl-c: stop accepting and let open streams finish.

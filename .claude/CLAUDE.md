@@ -16,9 +16,12 @@ Spec da v0: `docs/specs/2026-10-29-nowvi-v0-design.md`. Design: `design/` (expor
 ## Layout
 
 - `apps/web`: Next 16 sobre o next-shadcn-admin-dashboard, com npm. Leia `apps/web/AGENTS.md`. Comandos: `npm run dev`,
-  `npm run check`, `npx tsc --noEmit` e `npm run build`.
+  `npm run check`, `npx tsc --noEmit`, `npm run test:coverage` e `npm run build`.
 - `crates/nowvi-api`: axum + sqlx + Postgres, que chama o `yt-dlp`, com um slice por feature.
-  Comandos: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings` e `cargo build`.
+  Comandos: `cargo fmt --check`, `cargo clippy --all-targets -- -D warnings`, `cargo test`,
+  `scripts/coverage.sh` (cobertura travada em 90%) e `cargo build`. O `cargo test` e o
+  `scripts/coverage.sh` pedem o Postgres na porta 55432 com a senha `nowvi`:
+  `docker run -d --rm --name nowvi-test-pg -e POSTGRES_PASSWORD=nowvi -p 55432:5432 postgres:16-alpine`.
 - O contrato entre os dois é a seção "Contrato da API" da spec. Nunca importe de um app no outro.
 
 ## Fluxo do card
@@ -36,9 +39,30 @@ PR para a `main`. O Railway faz o deploy a partir da `main`.
 | web | opus | `apps/web` |
 | devops | opus | Docker, Railway e CI |
 | qa | opus | revisão adversarial, só leitura |
-| growth | sonnet | recomendação de SEO, GEO, ads e copy |
+| growth | sonnet | pesquisa de mercado, ads e copy (recomendação) |
+| ux | sonnet | crítica de UX e UI, voto no painel e revisão de screenshot |
+| seo | opus | SEO técnico, GEO e conteúdo por idioma em `apps/web`, roadmap em `docs/specs/seo/` |
+
+## Painel de decisão
+
+Toda decisão de produto, UX, arquitetura ou segurança passa por um painel antes do código.
+- Votam, **um por vez** (sem paralelismo, para economizar token): `architect` (dados, performance
+  e arquitetura), `ux` (fluxo, tela e copy), `seo` ou `growth` (busca e mercado) e `qa`
+  (segurança, quando o tema toca nela).
+- Cada voto entra em `docs/specs/decisions.md` como `D-<n>`, com a pergunta, o voto de cada
+  agent, o vencedor, o trade-off e os critérios de aceite.
+- A sessão principal desempata pelo melhor para o usuário final, com performance extrema.
+- Quem implementa não decide UX sozinho: uma dúvida aberta no meio do build volta ao painel.
+
+## Legibilidade
+
+- Variável, função, tipo e arquivo têm nome semântico do domínio (`downloadToken`, `pickFormats`, `ErrorCode`), nunca `a`, `b`, `x`, `data`, `item`, `tmp`, `found` ou abreviação. Isso vale para parâmetro de callback também: `(left, right)`, não `(a, b)`.
+- Qualquer pessoa, de estagiária a staff engineer, entende uma função em 10 segundos. Se não entende, quebre a função em partes com nome.
+- Comentário segue a regra do CLAUDE.md global: só fato que o código não mostra (restrição externa, quirk de biblioteca ou rede, decisão de time). Rationale vai para `docs/specs/`.
+- `.lagune/hooks/` é código de terceiro, gerado pelo `npx lagune`. Não é revisado nem editado.
 
 ## Exceção da v0
 
-A v0 sai sem testes, por pedido do Emerson em 2026-10-29. O NOWVI-15 traz TDD e cobertura acima de 90%
-antes da próxima feature.
+Encerrada. A v0 saiu sem testes, por pedido do Emerson em 2026-10-29. A web tem testes desde o NOWVI-34
+(Vitest, Testing Library e MSW contra o contrato) e a API desde o NOWVI-15 (o router inteiro com um
+yt-dlp fake e o Postgres de teste). As duas têm cobertura travada em 90%, e toda feature nova sai com TDD.

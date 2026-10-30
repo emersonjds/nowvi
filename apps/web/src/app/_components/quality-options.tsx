@@ -1,6 +1,7 @@
 import { CirclePlayIcon, MonitorPlayIcon, QrCodeIcon, StarIcon, ZapIcon } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { fill, useDictionary } from "@/i18n/client";
 import type { FreeFormat, VideoFormat } from "@/lib/api";
 
 export const qualityLabel = ({ quality, height }: VideoFormat) => {
@@ -10,7 +11,7 @@ export const qualityLabel = ({ quality, height }: VideoFormat) => {
 };
 
 export const formatMegabytes = (bytes: number) =>
-  `~${(bytes / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })} MB`;
+  `~${(bytes / 1_000_000).toLocaleString(undefined, { maximumFractionDigits: 1 })} MB`;
 
 type QualityOptionsProps = {
   formats: VideoFormat[];
@@ -21,6 +22,7 @@ type QualityOptionsProps = {
 };
 
 export const QualityOptions = ({ formats, selected, onSelect, onFree, onFullHd }: QualityOptionsProps) => {
+  const copy = useDictionary().quality;
   const fullHd = formats.find((format) => format.tier === "full_hd");
   const free = formats.filter((format) => format.tier === "free");
 
@@ -28,30 +30,30 @@ export const QualityOptions = ({ formats, selected, onSelect, onFree, onFullHd }
     <section aria-labelledby="qualidade-titulo" className="flex flex-col gap-4">
       <div className="flex items-baseline justify-between gap-2">
         <h2 id="qualidade-titulo" className="text-xl font-semibold tracking-tight">
-          Escolha como baixar
+          {copy.title}
         </h2>
-        <p className="text-muted-foreground text-sm">{fullHd ? "2 opções" : "1 opção"}</p>
+        <p className="text-muted-foreground text-sm">{fullHd ? copy.twoOptions : copy.oneOption}</p>
       </div>
 
       {fullHd ? (
         <article className="border-primary bg-card relative flex flex-col gap-4 overflow-hidden rounded-2xl border-2 p-5 shadow-sm">
           <span className="bg-primary text-primary-foreground absolute top-0 right-0 flex items-center gap-1 rounded-bl-xl px-3 py-1 text-xs font-semibold">
             <StarIcon className="size-3.5" aria-hidden />
-            Recomendado
+            {copy.recommended}
           </span>
           <div className="flex items-end justify-between gap-4 pt-4">
             <h3 className="text-2xl leading-7 font-bold">{qualityLabel(fullHd)}</h3>
             <p className="text-primary text-xl font-bold">R$ 2,00</p>
           </div>
-          <p className="text-muted-foreground">Sem anúncio, na velocidade máxima e liberado na hora pelo Pix.</p>
+          <p className="text-muted-foreground">{copy.fullHdText}</p>
           <ul className="bg-muted grid grid-cols-2 gap-2 rounded-xl p-3 text-sm">
             <li className="flex items-center gap-2">
               <ZapIcon className="text-primary size-4" aria-hidden />
-              Download instantâneo
+              {copy.instant}
             </li>
             <li className="flex items-center gap-2">
               <MonitorPlayIcon className="text-primary size-4" aria-hidden />
-              Nitidez original
+              {copy.sharp}
             </li>
           </ul>
           <Button
@@ -59,7 +61,7 @@ export const QualityOptions = ({ formats, selected, onSelect, onFree, onFullHd }
             onClick={onFullHd}
           >
             <QrCodeIcon className="size-5" aria-hidden />
-            Liberar Full HD com Pix
+            {copy.unlockPix}
           </Button>
         </article>
       ) : null}
@@ -67,13 +69,16 @@ export const QualityOptions = ({ formats, selected, onSelect, onFree, onFullHd }
       <article className="bg-card flex flex-col gap-4 rounded-2xl border p-5 shadow-sm">
         <div className="flex items-center justify-between gap-4">
           <h3 className="text-xl font-bold">
-            Grátis <span className="text-muted-foreground text-base font-medium">até {free[0]?.quality}</span>
+            {copy.free}{" "}
+            <span className="text-muted-foreground text-base font-medium">
+              {fill(copy.upTo, { quality: free[0]?.quality ?? "" })}
+            </span>
           </h3>
           <p className="bg-muted rounded-md px-2 py-0.5 text-sm font-semibold">R$ 0,00</p>
         </div>
-        <p className="text-muted-foreground">Assista a um anúncio curto de 30 segundos e baixe sem pagar nada.</p>
+        <p className="text-muted-foreground">{copy.freeText}</p>
         <fieldset className="flex flex-col gap-2">
-          <legend className="sr-only">Qualidade do download grátis</legend>
+          <legend className="sr-only">{copy.freeLegend}</legend>
           {free.map((format) => (
             <label
               key={format.token}
@@ -95,7 +100,7 @@ export const QualityOptions = ({ formats, selected, onSelect, onFree, onFullHd }
         </fieldset>
         <Button variant="secondary" className="h-12 text-base font-bold" onClick={onFree}>
           <CirclePlayIcon className="size-5" aria-hidden />
-          Baixar grátis ({selected.quality})
+          {fill(copy.freeButton, { quality: selected.quality })}
         </Button>
       </article>
     </section>

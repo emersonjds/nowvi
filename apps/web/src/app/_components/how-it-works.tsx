@@ -1,11 +1,15 @@
+import type { Dictionary } from "@/i18n/dictionaries/pt-br";
+
 import type { Step } from "../_content/landings";
 
-export const HowItWorks = ({ steps }: { steps: Step[] }) => (
+type HowItWorksProps = { steps: Step[]; copy: Dictionary["howItWorks"] };
+
+export const HowItWorks = ({ steps, copy }: HowItWorksProps) => (
   <section id="como-funciona" aria-labelledby="como-funciona-titulo" className="flex scroll-mt-20 flex-col gap-6">
     <div className="flex flex-col items-center gap-1 text-center">
-      <p className="text-primary text-xs font-semibold tracking-widest uppercase">Simples • Rápido • Direto</p>
+      <p className="text-primary text-xs font-semibold tracking-widest uppercase">{copy.eyebrow}</p>
       <h2 id="como-funciona-titulo" className="text-2xl font-bold tracking-tight md:text-3xl">
-        Como funciona o Nowvi
+        {copy.title}
       </h2>
     </div>
     <ol className="grid gap-4">

@@ -2,4 +2,8 @@
 **/node_modules
 apps/web/.next
 .git
-**/.env
+**/.env*
+!**/.env.example
+**/coverage
+**/*.tsbuildinfo
+**/.vitest
