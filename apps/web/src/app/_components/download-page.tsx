@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 import Link from "next/link";
 
-import { APP_CONFIG } from "@/config/app-config";
+import { APP_CONFIG, absoluteUrl } from "@/config/app-config";
 import { LOCALE_INFO, type Locale } from "@/i18n/config";
 import { getDictionary, LANDING_IDS, type PageKey, pageContent, pagePath } from "@/i18n/dictionary";
 import { pageJsonLd, serializeJsonLd } from "@/lib/json-ld";
@@ -25,8 +25,8 @@ export const DownloadPage = ({ locale, page, children }: DownloadPageProps) => {
   const content = pageContent(locale, page);
   const homePath = pagePath(locale, "home");
   const { highlight } = dictionary.home;
-  const homeUrl = new URL(homePath, APP_CONFIG.url).href;
-  const url = new URL(pagePath(locale, page), APP_CONFIG.url).href;
+  const homeUrl = absoluteUrl(homePath);
+  const url = absoluteUrl(pagePath(locale, page));
   const jsonLd = pageJsonLd({
     siteUrl: APP_CONFIG.url,
     homeUrl,

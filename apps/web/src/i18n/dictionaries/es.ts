@@ -8,15 +8,6 @@ export const es = {
     title: "Nowvi: descargar videos de TikTok, X y Facebook",
     description:
       "Descarga videos de TikTok, X y Facebook sin marca de agua y sin registrarte. Gratis hasta 720p y sin guardar nada en el servidor.",
-    keywords: [
-      "descargar video de tiktok sin marca de agua",
-      "descargar video de x",
-      "descargar video de twitter",
-      "descargar video de facebook mp4",
-      "descargar reels de facebook",
-      "guardar videos de tiktok",
-      "descargador de videos online",
-    ],
     heading: "Descarga videos de cualquier red, en un solo lugar.",
     highlight: "en un solo lugar.",
     subtitle: "Guarda en tu teléfono videos de TikTok, posts de X y videos de Facebook en segundos.",
