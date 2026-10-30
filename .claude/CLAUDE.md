@@ -39,6 +39,13 @@ PR para a `main`. O Railway faz o deploy a partir da `main`.
 | growth | sonnet | pesquisa de mercado, ads e copy (recomendação) |
 | seo | opus | SEO técnico, GEO e conteúdo por idioma em `apps/web`, roadmap em `docs/specs/seo/` |
 
+## Legibilidade
+
+- Variável, função, tipo e arquivo têm nome semântico do domínio (`downloadToken`, `pickFormats`, `ErrorCode`), nunca `a`, `b`, `x`, `data`, `item`, `tmp`, `found` ou abreviação. Isso vale para parâmetro de callback também: `(left, right)`, não `(a, b)`.
+- Qualquer pessoa, de estagiária a staff engineer, entende uma função em 10 segundos. Se não entende, quebre a função em partes com nome.
+- Comentário segue a regra do CLAUDE.md global: só fato que o código não mostra (restrição externa, quirk de biblioteca ou rede, decisão de time). Rationale vai para `docs/specs/`.
+- `.lagune/hooks/` é código de terceiro, gerado pelo `npx lagune`. Não é revisado nem editado.
+
 ## Exceção da v0
 
 A v0 sai sem testes, por pedido do Emerson em 2026-10-29. O NOWVI-15 traz TDD e cobertura acima de 90%
