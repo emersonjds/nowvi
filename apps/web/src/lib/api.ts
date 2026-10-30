@@ -7,7 +7,13 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export const platformSchema = z.enum(["instagram", "tiktok", "x", "facebook"]);
 
-const formatBase = { quality: z.string(), height: z.number(), ext: z.string(), filesize_bytes: z.number().nullable() };
+const formatBase = {
+  quality: z.string(),
+  height: z.number(),
+  ext: z.string(),
+  filesize_bytes: z.number().nullable(),
+  h264: z.boolean().catch(false),
+};
 
 const formatSchema = z.discriminatedUnion("tier", [
   z.object({ ...formatBase, tier: z.literal("free"), token: z.string() }),
@@ -41,13 +47,16 @@ export const videoInfoSchema = z
     if (video.formats.some((format) => format.tier === "free")) return video;
     // An API from before NOWVI-22 sends no `formats` mid deploy: rebuild the list from `free`.
     const { height, filesize_bytes, token } = video.free;
-    const formats: VideoFormat[] = [{ quality: `${height}p`, height, ext: "mp4", filesize_bytes, tier: "free", token }];
+    const formats: VideoFormat[] = [
+      { quality: `${height}p`, height, ext: "mp4", filesize_bytes, h264: false, tier: "free", token },
+    ];
     if (video.full_hd_available) {
       formats.unshift({
         quality: "1080p",
         height: 1080,
         ext: "mp4",
         filesize_bytes: null,
+        h264: false,
         tier: "full_hd",
         token: null,
       });
