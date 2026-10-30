@@ -1,8 +1,7 @@
-import { ZapIcon } from "lucide-react";
-
 import type { Locale } from "@/i18n/config";
 import { getDictionary, pagePath } from "@/i18n/dictionary";
 
+import { BrandLogo } from "./brand-logo";
 import { LEGAL_SECTIONS } from "./legal-sections";
 
 export const SiteFooter = ({ locale }: { locale: Locale }) => {
@@ -17,8 +16,7 @@ export const SiteFooter = ({ locale }: { locale: Locale }) => {
     <footer className="bg-muted border-t">
       <div className="mx-auto flex max-w-5xl flex-col items-center gap-4 px-4 py-10 text-center">
         <p className="text-primary flex items-center gap-1.5 text-xl font-extrabold">
-          <ZapIcon className="size-5 fill-current" aria-hidden />
-          Nowvi
+          <BrandLogo />
         </p>
         <p className="text-muted-foreground max-w-md text-sm">{dictionary.footer.tagline}</p>
         <nav aria-label={dictionary.footer.legalNav}>

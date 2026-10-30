@@ -87,7 +87,7 @@ export const es = {
       ],
     },
     x: {
-      slug: "descargar-video-x",
+      slug: "descargar-video-twitter",
       network: "X (Twitter)",
       title: "Descargar Video de X (Twitter) en MP4 | Nowvi",
       description: "Descarga videos de posts de X (antes Twitter) en MP4, sin registrarte. Gratis hasta 720p.",
