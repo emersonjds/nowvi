@@ -25,4 +25,5 @@ url = "2"
 unsafe_code = "forbid"
 
 [dev-dependencies]
+tokio = { version = "1.53", features = ["test-util"] }
 tower = { version = "0.5", features = ["util"] }

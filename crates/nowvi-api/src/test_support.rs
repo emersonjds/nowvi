@@ -84,6 +84,13 @@ pub async fn send(router: &Router, request: Request<Body>) -> Response {
         .expect("the router never fails")
 }
 
+pub async fn json_body(response: Response) -> serde_json::Value {
+    let body = axum::body::to_bytes(response.into_body(), 64 * 1024)
+        .await
+        .expect("the whole body");
+    serde_json::from_slice(&body).expect("a JSON body")
+}
+
 /// The `<code>` of a `303 <WEB_ORIGIN>/?erro=<code>`.
 pub fn back_to_page_code(response: &Response) -> Option<&str> {
     if response.status() != StatusCode::SEE_OTHER {
