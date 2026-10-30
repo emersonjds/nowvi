@@ -24,7 +24,40 @@ const MAX_ENTRIES: usize = 100_000;
 
 struct Bucket {
     tokens: f64,
-    at: Instant,
+    refilled_at: Instant,
+}
+
+impl Bucket {
+    fn full(now: Instant) -> Self {
+        Bucket {
+            tokens: BURST,
+            refilled_at: now,
+        }
+    }
+
+    fn take(&mut self, now: Instant) -> Result<(), AppError> {
+        let refilled_tokens =
+            now.duration_since(self.refilled_at).as_secs_f64() / REFILL.as_secs_f64();
+        self.tokens = (self.tokens + refilled_tokens).min(BURST);
+        self.refilled_at = now;
+        if self.tokens < 1.0 {
+            let wait_seconds = REFILL.as_secs_f64() * (1.0 - self.tokens);
+            return Err(AppError::RateLimited {
+                retry_after: (wait_seconds.ceil() as u64).max(1),
+            });
+        }
+        self.tokens -= 1.0;
+        Ok(())
+    }
+}
+
+fn evict_one_when_full(buckets: &mut HashMap<IpAddr, Bucket>, newcomer: IpAddr) {
+    if buckets.len() >= MAX_ENTRIES
+        && !buckets.contains_key(&newcomer)
+        && let Some(evicted) = buckets.keys().next().copied()
+    {
+        buckets.remove(&evicted);
+    }
 }
 
 /// The client as the limits see it: the IPv4 address, or the /64 of an IPv6 one.
@@ -65,27 +98,11 @@ impl RateLimits {
             .buckets
             .lock()
             .unwrap_or_else(|poison| poison.into_inner());
-        if buckets.len() >= MAX_ENTRIES
-            && !buckets.contains_key(&address)
-            && let Some(evicted) = buckets.keys().next().copied()
-        {
-            buckets.remove(&evicted);
-        }
-        let bucket = buckets.entry(address).or_insert(Bucket {
-            tokens: BURST,
-            at: now,
-        });
-        let refilled = now.duration_since(bucket.at).as_secs_f64() / REFILL.as_secs_f64();
-        bucket.tokens = (bucket.tokens + refilled).min(BURST);
-        bucket.at = now;
-        if bucket.tokens < 1.0 {
-            let wait = REFILL.as_secs_f64() * (1.0 - bucket.tokens);
-            return Err(AppError::RateLimited {
-                retry_after: (wait.ceil() as u64).max(1),
-            });
-        }
-        bucket.tokens -= 1.0;
-        Ok(())
+        evict_one_when_full(&mut buckets, address);
+        buckets
+            .entry(address)
+            .or_insert_with(|| Bucket::full(now))
+            .take(now)
     }
 
     /// `busy` once the client already has `JOBS_PER_CLIENT` jobs in flight.
@@ -112,12 +129,12 @@ impl RateLimits {
         self.buckets
             .lock()
             .unwrap_or_else(|poison| poison.into_inner())
-            .retain(|_, bucket| now.duration_since(bucket.at) < REFILL.mul_f64(BURST));
+            .retain(|_, bucket| now.duration_since(bucket.refilled_at) < REFILL.mul_f64(BURST));
     }
 }
 
-/// Railway's edge sets `X-Real-IP` and appends the client to `X-Forwarded-For`, so the last
-/// entry is the one to trust; entries to its left are client-controlled. Without either, the peer.
+/// Railway's edge sets `X-Real-IP` and appends the client to `X-Forwarded-For`: only the last
+/// entry is trusted, entries to its left are client-controlled. Without either, the peer.
 fn client_ip(headers: &HeaderMap, peer: Option<IpAddr>) -> ClientIp {
     let real_ip = headers
         .get("x-real-ip")
@@ -142,8 +159,8 @@ fn client_ip(headers: &HeaderMap, peer: Option<IpAddr>) -> ClientIp {
 /// The first `bits` of an IPv6 address; an IPv4 one stays whole.
 fn ipv6_prefix(address: IpAddr, bits: u32) -> IpAddr {
     match address {
-        IpAddr::V6(v6) => IpAddr::V6(Ipv6Addr::from(u128::from(v6) & (!0u128 << (128 - bits)))),
-        v4 => v4,
+        IpAddr::V6(ipv6) => IpAddr::V6(Ipv6Addr::from(u128::from(ipv6) & (!0u128 << (128 - bits)))),
+        ipv4 => ipv4,
     }
 }
 
