@@ -1,5 +1,8 @@
 import { z } from "zod";
 
+// The CSP has no 'unsafe-eval'; without this zod probes `new Function` and trips a violation.
+z.config({ jitless: true });
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export const platformSchema = z.enum(["instagram", "tiktok", "x", "facebook"]);
