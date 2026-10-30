@@ -58,6 +58,7 @@ pub struct FormatItem {
     filesize_bytes: Option<u64>,
     tier: Tier,
     token: Option<String>,
+    h264: bool,
 }
 
 #[derive(Serialize)]
@@ -153,6 +154,7 @@ pub async fn info(
                 filesize_bytes: pick.filesize_bytes,
                 tier: pick.tier,
                 token,
+                h264: pick.h264,
             }
         })
         .collect();
