@@ -33,8 +33,8 @@ fn error(status: StatusCode, code: &str) -> (StatusCode, Value) {
     (status, json!({ "error": code }))
 }
 
-/// Verifies each token against its row, then blanks the tokens and `available_at`, so the rest
-/// of the body compares to a literal. Returns the `format_id` each free token downloads.
+/// Verifies each token against its row, then blanks the tokens and `available_at` for a literal
+/// comparison of the rest of the body. Returns the `format_id` each free token downloads.
 fn verified_format_ids(info: &mut Value, url: &str) -> Vec<String> {
     let available_at = info["free"]["available_at"].as_u64().expect("available_at");
     let expected_available_at = token::now() + AD_WAIT_SECONDS;
