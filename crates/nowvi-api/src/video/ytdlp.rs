@@ -36,7 +36,6 @@ const NOT_FOUND_HINTS: [&str; 5] = [
     "login required",
 ];
 
-/// The fields of `yt-dlp -J` the API reads.
 #[derive(Debug, Deserialize)]
 pub struct Probe {
     pub webpage_url: Option<String>,
@@ -114,8 +113,7 @@ fn filesize_bytes(format: &Format) -> Option<u64> {
         .map(|bytes| bytes as u64)
 }
 
-/// The preferred progressive format per short side, plus the mp4 ones listed with no size
-/// (Facebook's `hd` and `sd`).
+/// Also returns the mp4 formats listed with no size (Facebook's `hd` and `sd`).
 fn best_per_short_side(formats: &[Format]) -> (BTreeMap<u32, &Format>, Vec<&Format>) {
     let mut best: BTreeMap<u32, &Format> = BTreeMap::new();
     let mut sizeless = Vec::new();
@@ -250,7 +248,6 @@ fn probe_failure(stderr: &[u8]) -> AppError {
     }
 }
 
-/// The exit status, stdout and stderr; dropping the child on timeout kills it.
 async fn run_probe(mut child: Child) -> Result<(ExitStatus, Vec<u8>, Vec<u8>), AppError> {
     let (Some(stdout), Some(stderr)) = (child.stdout.take(), child.stderr.take()) else {
         return Err(AppError::ExtractFailed);
