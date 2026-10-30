@@ -17,10 +17,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { fill, useDictionary } from "@/i18n/client";
-import { downloadUrl, type FreeFormat } from "@/lib/api";
+import { downloadUrl, type FreeFormat, type VideoFormat } from "@/lib/api";
 
 import { AdSlot } from "./ad-slot";
 import { formatMegabytes, qualityLabel } from "./quality-options";
+import { useWhatsAppShare, WhatsAppShareButton } from "./whatsapp-share";
 
 const phaseOf = (downloading: boolean, done: boolean) => {
   if (downloading) return "downloading";
@@ -30,6 +31,7 @@ const phaseOf = (downloading: boolean, done: boolean) => {
 
 type WaitingPanelProps = {
   format: FreeFormat;
+  formats: readonly VideoFormat[];
   startedAt: number;
   readyAt: number;
   expiresAt: number;
@@ -41,6 +43,7 @@ type WaitingPanelProps = {
 
 export const WaitingPanel = ({
   format,
+  formats,
   startedAt,
   readyAt,
   expiresAt,
@@ -57,6 +60,10 @@ export const WaitingPanel = ({
   const phase = phaseOf(downloading, done);
   const seconds = Math.ceil(remainingMs / 1000);
   const progress = 100 - (remainingMs / Math.max(1, readyAt - startedAt)) * 100;
+  const whatsApp = useWhatsAppShare({ formats, chosen: format, active: phase !== "waiting" });
+  const savedVideo = whatsApp.savedVideo;
+  const downloadHref = savedVideo?.href ?? downloadUrl(format.token);
+  const downloadName = savedVideo?.fileName ?? "";
 
   useEffect(() => {
     if (done) return;
@@ -65,7 +72,7 @@ export const WaitingPanel = ({
   }, [done]);
 
   const handleDownload = (event: MouseEvent<HTMLAnchorElement>) => {
-    if (Date.now() <= expiresAt) {
+    if (savedVideo || Date.now() <= expiresAt) {
       setDownloading(true);
       return;
     }
@@ -111,7 +118,7 @@ export const WaitingPanel = ({
               {copy.newVideo}
             </Button>
             <Button asChild variant="secondary" className="h-12 text-base font-bold">
-              <a href={downloadUrl(format.token)} download onClick={handleDownload}>
+              <a href={downloadHref} download={downloadName} onClick={handleDownload}>
                 <DownloadIcon className="size-5" aria-hidden />
                 {copy.again}
               </a>
@@ -120,15 +127,19 @@ export const WaitingPanel = ({
               <Layers2Icon className="size-5" aria-hidden />
               {copy.otherQuality}
             </Button>
+            <WhatsAppShareButton whatsApp={whatsApp} />
           </>
         )}
         {phase === "ready" && (
-          <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-base font-bold">
-            <a href={downloadUrl(format.token)} download onClick={handleDownload}>
-              <DownloadIcon className="size-5" aria-hidden />
-              {copy.download}
-            </a>
-          </Button>
+          <>
+            <Button asChild className="bg-accent text-accent-foreground hover:bg-accent/90 h-12 text-base font-bold">
+              <a href={downloadHref} download={downloadName} onClick={handleDownload}>
+                <DownloadIcon className="size-5" aria-hidden />
+                {copy.download}
+              </a>
+            </Button>
+            <WhatsAppShareButton whatsApp={whatsApp} />
+          </>
         )}
         {phase === "waiting" && (
           <Button disabled variant="secondary" className="h-12 text-base font-bold">

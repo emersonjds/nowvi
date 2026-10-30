@@ -255,6 +255,14 @@ export const ptBr = {
       skipText: "Baixe na hora, sem anúncio e em Full HD 1080p.",
       skipButton: "Baixar em Full HD por R$ 2,00 no Pix",
       file: "Vídeo {quality} em {ext}",
+      share: {
+        preparing: "Preparando envio…",
+        send: "Enviar no WhatsApp",
+        prepare: "Preparar {quality} para WhatsApp",
+        failed: "Não deu, baixe e envie",
+        shareLink: "Compartilhar link",
+        linkText: "Baixe vídeos do TikTok, X e Facebook de graça no Nowvi: {url}",
+      },
     },
     pix: {
       title: "Full HD 1080p com Pix",
