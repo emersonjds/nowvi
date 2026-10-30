@@ -141,11 +141,11 @@ pub async fn info(
                 token::sign(
                     &state.config.token_secret,
                     &Claims {
-                        u: url.to_string(),
-                        p: platform.into(),
-                        f: pick.format_id,
-                        e: ext.clone(),
-                        q: quality.clone(),
+                        url: url.to_string(),
+                        platform: platform.into(),
+                        format_id: pick.format_id,
+                        ext: ext.clone(),
+                        quality: quality.clone(),
                         nbf: available_at,
                         exp: available_at + token::LIFETIME_SECONDS,
                     },
@@ -238,9 +238,14 @@ async fn stream(
     let deadline = Instant::now() + state.config.stream_deadline;
     let Query(query) = query.map_err(|_| AppError::InvalidToken)?;
     let claims = token::verify(&state.config.token_secret, &query.token, token::now())?;
-    let url = Url::parse(&claims.u).map_err(|_| AppError::InvalidToken)?;
+    let url = Url::parse(&claims.url).map_err(|_| AppError::InvalidToken)?;
     let slot = job_slot(state, client)?;
-    let mut child = ytdlp::stream(&state.config.ytdlp_bin, &url, &claims.p, &claims.f)?;
+    let mut child = ytdlp::stream(
+        &state.config.ytdlp_bin,
+        &url,
+        &claims.platform,
+        &claims.format_id,
+    )?;
     let Some(stdout) = child.stdout.take() else {
         return Err(AppError::ExtractFailed);
     };
@@ -253,19 +258,19 @@ async fn stream(
             return Err(AppError::ExtractFailed);
         }
         Ok(None) => {
-            tracing::warn!(platform = claims.p, "yt-dlp ended without bytes");
+            tracing::warn!(platform = claims.platform, "yt-dlp ended without bytes");
             return Err(AppError::ExtractFailed);
         }
         Err(_) => {
             tracing::warn!(
-                platform = claims.p,
+                platform = claims.platform,
                 "yt-dlp download timed out before the first byte"
             );
             return Err(AppError::ExtractFailed);
         }
     };
-    let filename = format!("nowvi-{}-{}.{}", claims.p, token::now(), claims.e);
-    let content_type = match claims.e.as_str() {
+    let filename = format!("nowvi-{}-{}.{}", claims.platform, token::now(), claims.ext);
+    let content_type = match claims.ext.as_str() {
         "mp4" => "video/mp4",
         "webm" => "video/webm",
         _ => "application/octet-stream",
@@ -275,8 +280,8 @@ async fn stream(
         child,
         _slot: slot,
         pool: state.pool.clone(),
-        platform: claims.p,
-        quality: claims.q,
+        platform: claims.platform,
+        quality: claims.quality,
         deadline,
         idle_timeout: state.config.stream_idle_timeout,
     };

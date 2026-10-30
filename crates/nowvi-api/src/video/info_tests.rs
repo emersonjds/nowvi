@@ -54,15 +54,15 @@ fn verified_format_ids(info: &mut Value, url: &str) -> Vec<String> {
         };
         let claims = token::verify(&SECRET, download_token, available_at)
             .expect("a token valid from available_at");
-        assert_eq!(claims.u, url);
-        assert_eq!(claims.p, platform);
-        assert_eq!(format["ext"], claims.e.as_str());
-        assert_eq!(format["quality"], claims.q.as_str());
+        assert_eq!(claims.url, url);
+        assert_eq!(claims.platform, platform);
+        assert_eq!(format["ext"], claims.ext.as_str());
+        assert_eq!(format["quality"], claims.quality.as_str());
         assert_eq!(
             (claims.nbf, claims.exp),
             (available_at, available_at + token::LIFETIME_SECONDS)
         );
-        format_ids.push(claims.f);
+        format_ids.push(claims.format_id);
         format["token"] = json!("<token>");
     }
     info["free"]["token"] = json!("<token>");

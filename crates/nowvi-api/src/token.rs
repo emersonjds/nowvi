@@ -11,13 +11,17 @@ pub const LIFETIME_SECONDS: u64 = 15 * 60;
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Claims {
-    pub u: String,
-    pub p: String,
-    pub f: String,
-    pub e: String,
+    #[serde(rename = "u")]
+    pub url: String,
+    #[serde(rename = "p")]
+    pub platform: String,
+    #[serde(rename = "f")]
+    pub format_id: String,
+    #[serde(rename = "e")]
+    pub ext: String,
     /// `"<height>p"`; tokens signed before NOWVI-22 lack it.
-    #[serde(default)]
-    pub q: String,
+    #[serde(rename = "q", default)]
+    pub quality: String,
     pub nbf: u64,
     pub exp: u64,
 }
@@ -74,11 +78,11 @@ mod tests {
 
     fn claims(nbf: u64, exp: u64) -> Claims {
         Claims {
-            u: "https://x.com/nowvi/status/1".into(),
-            p: "x".into(),
-            f: "http-2176".into(),
-            e: "mp4".into(),
-            q: "720p".into(),
+            url: "https://x.com/nowvi/status/1".into(),
+            platform: "x".into(),
+            format_id: "http-2176".into(),
+            ext: "mp4".into(),
+            quality: "720p".into(),
             nbf,
             exp,
         }
@@ -146,7 +150,7 @@ mod tests {
         let old_json = br#"{"u":"https://x.com/nowvi/status/1","p":"x","f":"http-2176","e":"mp4","nbf":100,"exp":200}"#;
         let verified =
             verify(&SECRET, &sign_json(old_json), 150).expect("an old token still verifies");
-        assert_eq!(verified.q, "");
-        assert_eq!(verified.f, "http-2176");
+        assert_eq!(verified.quality, "");
+        assert_eq!(verified.format_id, "http-2176");
     }
 }
