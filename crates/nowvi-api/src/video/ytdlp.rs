@@ -172,7 +172,19 @@ pub async fn probe(bin: &str, url: &Url, platform: &str) -> Result<Probe, AppErr
 
 /// `yt-dlp -f <format_id> -o -`: the caller streams stdout; stderr goes to the `debug` log.
 pub fn stream(bin: &str, url: &Url, platform: &str, format_id: &str) -> Result<Child, AppError> {
-    let mut child = spawn(bin, &["-f", format_id, "--quiet", "-o", "-"], url)?;
+    let mut child = spawn(
+        bin,
+        &[
+            "-f",
+            format_id,
+            "--max-filesize",
+            "500M",
+            "--quiet",
+            "-o",
+            "-",
+        ],
+        url,
+    )?;
     if let Some(stderr) = child.stderr.take() {
         let (url, platform) = (url.clone(), platform.to_owned());
         tokio::spawn(async move {

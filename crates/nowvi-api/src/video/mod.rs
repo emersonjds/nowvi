@@ -1,6 +1,8 @@
 mod allowlist;
 mod ytdlp;
 
+use std::time::Duration;
+
 use axum::Json;
 use axum::body::{Body, Bytes};
 use axum::extract::rejection::{JsonRejection, QueryRejection};
@@ -12,6 +14,7 @@ use serde::{Deserialize, Serialize};
 use sqlx::PgPool;
 use tokio::process::Child;
 use tokio::sync::OwnedSemaphorePermit;
+use tokio::time::Instant;
 use tokio_util::io::ReaderStream;
 use url::Url;
 
@@ -19,6 +22,11 @@ use crate::AppState;
 use crate::error::AppError;
 use crate::rate_limit::{ClientIp, JobGuard};
 use crate::token::{self, Claims};
+
+/// The spec's stream limits: 30 s without a chunk ends it, and so do 10 min in total.
+const CHUNK_TIMEOUT: Duration = Duration::from_secs(30);
+const STREAM_DEADLINE: Duration = Duration::from_secs(10 * 60);
+const EXIT_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Deserialize)]
 pub struct InfoRequest {
@@ -131,6 +139,7 @@ struct Job {
     _slot: Slot,
     pool: PgPool,
     platform: String,
+    deadline: Instant,
 }
 
 pub async fn download(
@@ -138,6 +147,7 @@ pub async fn download(
     Extension(client): Extension<ClientIp>,
     query: Result<Query<DownloadQuery>, QueryRejection>,
 ) -> Result<Response, AppError> {
+    let deadline = Instant::now() + STREAM_DEADLINE;
     let Query(query) = query.map_err(|_| AppError::InvalidToken)?;
     let claims = token::verify(&state.config.token_secret, &query.token, token::now())?;
     let url = Url::parse(&claims.u).map_err(|_| AppError::InvalidToken)?;
@@ -174,16 +184,28 @@ pub async fn download(
         _slot: slot,
         pool: state.pool.clone(),
         platform: claims.p,
+        deadline,
     };
-    let body = futures_util::stream::unfold(job, |mut job| async move {
+    // A `None` state ends the body; dropping the job kills the child and frees the slot.
+    let body = futures_util::stream::unfold(Some(job), |job| async move {
+        let mut job = job?;
         if let Some(chunk) = job.first.take() {
-            return Some((Ok(chunk), job));
+            return Some((Ok(chunk), Some(job)));
         }
-        match job.stdout.next().await {
-            Some(chunk) => Some((chunk, job)),
-            None => {
+        let until = job.deadline.min(Instant::now() + CHUNK_TIMEOUT);
+        match tokio::time::timeout_at(until, job.stdout.next()).await {
+            Ok(Some(Ok(chunk))) => Some((Ok(chunk), Some(job))),
+            Ok(Some(Err(error))) => Some((Err(error), None)),
+            Ok(None) => {
                 finish(job).await;
                 None
+            }
+            Err(_) => {
+                tracing::warn!(
+                    platform = job.platform,
+                    "yt-dlp download stalled or ran out of time"
+                );
+                Some((Err(std::io::ErrorKind::TimedOut.into()), None))
             }
         }
     });
@@ -203,7 +225,15 @@ pub async fn download(
 
 /// stdout closed: a clean exit counts as a download; a failed insert is only logged.
 async fn finish(mut job: Job) {
-    match job.child.wait().await {
+    let Ok(exit) = tokio::time::timeout(EXIT_TIMEOUT, job.child.wait()).await else {
+        tracing::warn!(
+            platform = job.platform,
+            "yt-dlp kept running after stdout closed"
+        );
+        let _ = job.child.kill().await;
+        return;
+    };
+    match exit {
         Ok(status) if status.success() => {
             tokio::spawn(crate::db::record_download(job.pool, job.platform));
         }
